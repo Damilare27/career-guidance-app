@@ -16,7 +16,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from openai import OpenAI
 
 # ---------- Paths ----------
-BASE_DIR = os.path.dirname(os.path.abspath((__file__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "..", "job_data", "jobs_dataset.json")
 FRONTEND_PATH = os.path.join(HERE, "/frontend")
 
@@ -183,4 +183,5 @@ async def recommend(payload: RecommendPayload):
         "alternatives": alternatives,
         "ai_summary": ai_summary
     }
+
 
