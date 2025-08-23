@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const careerGoal = formData.get("career_goal") || "";
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/recommend", {
+      const response = await fetch("https://web-production-73868.up.railway.app", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -163,3 +163,4 @@ document.addEventListener("DOMContentLoaded", () => {
     if (user) loadPreviousRecommendations();
   });
 });
+
