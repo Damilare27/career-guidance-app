@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Keep only one charset & viewport -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Career Guidance</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <meta name="description" content="Career Guidance helps Nigerian undergraduates discover the perfect tech career path through a personalised quiz powered by AI." />
+
+  <!-- Open Graph for social sharing -->
+  <meta property="og:title" content="Career Guidance Quiz" />
+  <meta property="og:description" content="Discover your ideal career path with our AI-powered quiz." />
+  <meta property="og:image" content="https://yourdomain.com/path-to-hero-image.jpg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://yourdomain.com" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Career Guidance Quiz" />
+  <meta name="twitter:description" content="Discover your ideal career path with our AI-powered quiz." />
+  <meta name="twitter:image" content="https://yourdomain.com/path-to-hero-image.jpg" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <!-- Header (removed invalid `section` attribute and duplicate id) -->
+  <header class="career-quiz-header">
+    <div class="header-left">
+      <img src="images/cg-logo.png" class="app-logo" alt="Career Guidance Logo" />
+    </div>
+
+    <nav>
+      <ul>
+        <li><a href="#hero">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#quiz">Quiz</a></li>
+        <li><button id="loginBtn">Login</button></li>
+        <li><button id="signupBtn">Sign Up</button></li>
+        <li><span id="userDisplay"></span></li>
+        <li><button id="logoutBtn" style="display:none;">Logout</button></li>
+      </ul>
+    </nav>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+      <div class="modal-content">
+        <span class="close" data-close="loginModal">&times;</span>
+        <h2>Login</h2>
+        <p>To continue your journey</p>
+        <input type="email" id="loginEmail" placeholder="Email">
+        <input type="password" id="loginPassword" placeholder="Password">
+        <button id="loginSubmit" type="button">Login</button>
+      </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div id="signupModal" class="modal">
+      <div class="modal-content">
+        <span class="close" data-close="signupModal">&times;</span>
+        <h2>Sign Up</h2>
+        <p>To get started and take the career guidance quiz</p>
+        <input type="text" id="signupUsername" placeholder="Username" required>
+        <input type="email" id="signupEmail" placeholder="Email" required>
+        <input type="password" id="signupPassword" placeholder="Password" required>
+        <button id="signupSubmit" type="button">Sign Up</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="hero" class="hero-section">
+    <div class="carousel">
+
+      <!-- Slide 1 -->
+      <div class="slide active">
+        <img src="images/image1.webp" alt="Hero Image">
+        <div class="hero-text">
+          <h2>Discover your ideal career path</h2>
+          <p>Take our quiz to get personalised guidance tailored to your skills and interests.</p>
+          <button onclick="document.getElementById('quizForm').scrollIntoView({behavior: 'smooth'})">
+            Start the Quiz
+          </button>
+        </div>
+      </div>
+
+      <!-- Slide 2 -->
+      <div class="slide">
+        <img src="images/image2.webp" alt="Learn About New Opportunities">
+        <div class="hero-text">
+          <h2>Learn About New Opportunities</h2>
+          <p>Explore fields you never thought of and get instant career recommendations.</p>
+          <button onclick="document.getElementById('quizForm').scrollIntoView({behavior: 'smooth'})">
+            Start the Quiz
+          </button>
+        </div>
+      </div>
+
+      <!-- Slide 3 -->
+      <div class="slide">
+        <img src="images/image3.webp" alt="Plan Your Future Today">
+        <div class="hero-text">
+          <h2>Plan Your Future Today</h2>
+          <p>Get personalised insights to help you make confident decisions.</p>
+          <button onclick="document.getElementById('quizForm').scrollIntoView({behavior: 'smooth'})">
+            Start the Quiz
+          </button>
+        </div>
+      </div>
+
+      <!-- Arrows -->
+      <button class="prev">&#10094;</button>
+      <button class="next">&#10095;</button>
+
+      <!-- Dots -->
+      <div class="dots">
+        <span class="dot active"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section id="about" class="about-section">
+    <h2 class="section-title">About the App</h2>
+    <p class="section-subtitle">Helping you discover your ideal career path, one quiz at a time.</p>
+
+    <div class="cards-container">
+      <div class="card">
+        <img src="images/a.svg" alt="Personalized Recommendations" class="card-img left">
+        <div class="card-content">
+          <h3 class="card-title">Personalized Recommendations</h3>
+          <p class="card-text">Get career suggestions tailored to your skills, interests, and experience.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="images/b.svg" alt="Interactive Quiz" class="card-img right">
+        <div class="card-content">
+          <h3 class="card-title">Interactive Quiz</h3>
+          <p class="card-text">A short, engaging quiz identifies your strengths and ideal job roles.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="images/d.svg" alt="Career Clarity" class="card-img left">
+        <div class="card-content">
+          <h3 class="card-title">Career Clarity</h3>
+          <p class="card-text">Explore paths like software development, data science, UI/UX design, and more.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="images/c.svg" alt="AI-Powered Insights" class="card-img right">
+        <div class="card-content">
+          <h3 class="card-title">AI-Powered Insights</h3>
+          <p class="card-text">Our AI matches your profile with real-world opportunities.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="images/f.svg" alt="Networking Accelerator" class="card-img left">
+        <div class="card-content">
+          <h3 class="card-title">Networking Accelerator</h3>
+          <p class="card-text">Explore networking connections, from career discovery to job placement</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="images/e.svg" alt="Easy & Quick" class="card-img right">
+        <div class="card-content">
+          <h3 class="card-title">Easy & Quick</h3>
+          <p class="card-text">Take the quiz, see results instantly, and start planning your future today.</p>
+        </div>
+      </div>
+    </div>
+
+    <br/><br/><br/>
+
+    <!-- Section 3 -->
+    <div>
+      <section id="joinus" class="joinus-section">
+        <h2 class="section-title">Join other students who have taken our quiz</h2>
+        <p class="section-subtitle">
+          What sets you apart in the workplace? <br/>
+          Discover the necessary skills that employers are looking for in this current age.
+        </p>
+      </section>
+    </div>
+
+    <br/><br/><br/>
+
+    <!-- Section 4 -->
+    <div class="nextmove">
+      <section id="nextmove" class="nextmove-section">
+        <h3 class="section-title">Make Your Next Move. Today</h3>
+        <p class="section-subtitle">
+          Feel confident in your next career move as a graduate with the insights and data you need.
+        </p>
+      </section>
+    </div>
+
+    <br/><br/><br/><br/>
+  </section>
+
+  <!-- Quiz Form Section -->
+  <div class="career-quiz-container" id="quiz">
+    <form id="quizForm" class="career-quiz-card" aria-label="Tech Career Guidance Quiz">
+      <h3>Take the Career Guidance Quiz</h3>
+      <br/><br/>
+
+      <!-- Q1 -->
+      <fieldset>
+        <legend>1. Which of the following best describes your current experience with tech-related tasks or tools? (Select all that apply)</legend>
+        <label><input type="checkbox" name="experience" value="Designed website or app" /> I’ve designed a website or mobile app</label>
+        <label><input type="checkbox" name="experience" value="Edited videos or graphics" /> I’ve edited videos or graphics for digital platforms</label>
+        <label><input type="checkbox" name="experience" value="Worked with spreadsheets or data tools" /> I’ve worked with spreadsheets or data analysis tools</label>
+        <label><input type="checkbox" name="experience" value="Interested but no hands-on experience" /> I’m interested in tech but have no hands-on experience yet</label>
+        <label><input type="checkbox" name="experience" value="Participated in tech clubs or workshops" /> I’ve participated in tech clubs, competitions, or workshops</label>
+        <label><input type="checkbox" name="experience" value="Taken programming courses" /> I’ve taken courses in programming (e.g., Python, Java)</label><br />
+      </fieldset>
+
+      <!-- Q2 -->
+      <fieldset>
+        <legend>2. What kind of tech tasks or roles do you enjoy or think you’d enjoy? (Choose up to 3)</legend>
+        <label><input type="checkbox" name="tasks" value="Analysing data and identifying patterns" /> Analysing data and identifying patterns</label>
+        <label><input type="checkbox" name="tasks" value="Marketing tech products online" /> Marketing tech products online</label>
+        <label><input type="checkbox" name="tasks" value="Creating digital content" /> Creating digital content (videos, graphics, blogs)</label>
+        <label><input type="checkbox" name="tasks" value="Designing digital products" /> Designing digital products (UI/UX)</label>
+        <label><input type="checkbox" name="tasks" value="Writing code and building software" /> Writing code and building software</label>
+        <label><input type="checkbox" name="tasks" value="Supporting users and solving technical problems" /> Supporting users and solving technical problems</label>
+        <label><input type="checkbox" name="tasks" value="Managing digital projects or teams" /> Managing digital projects or teams</label> <br />
+      </fieldset>
+
+      <!-- Q3 -->
+      <fieldset>
+        <legend>3. How confident are you in using technology tools without supervision?</legend> 
+        <select name="confidence" required>
+          <option value="">Select</option> <br />
+          <option value="1">1 – I find it confusing and need guidance</option>
+          <option value="2">2 – I can follow instructions with help</option>
+          <option value="3">3 – I’m average; I learn as I go</option>
+          <option value="4">4 – I’m comfortable and can figure most things out</option>
+          <option value="5">5 – I’m confident and often help others with tech</option>
+        </select>
+      </fieldset>
+      <br />
+
+      <!-- Q4 -->
+      <fieldset>
+        <legend>4. Which of these best describes your work and learning style?</legend>
+        <select name="work_style" required>
+          <option value="">Select</option>
+          <option value="structured">I prefer structured tasks with clear instructions</option>
+          <option value="independent">I enjoy figuring things out independently</option>
+          <option value="team">I like working in teams and sharing ideas</option>
+          <option value="visual">I learn best through visuals and practical examples</option>
+          <option value="fast-paced">I get easily bored and prefer fast-moving challenges</option> <br />
+        </select>
+      </fieldset>
+      <br />
+
+      <!-- Q5 -->
+      <fieldset>
+        <legend>5. What are your strongest transferable skills? (Choose up to 4)</legend>
+        <label><input type="checkbox" name="skills" value="Communication" /> Communication (verbal and written)</label>
+        <label><input type="checkbox" name="skills" value="Problem-solving" /> Problem-solving</label>
+        <label><input type="checkbox" name="skills" value="Creativity and design thinking" /> Creativity and design thinking</label>
+        <label><input type="checkbox" name="skills" value="Critical thinking and analysis" /> Critical thinking and analysis</label>
+        <label><input type="checkbox" name="skills" value="Organisation and time management" /> Organisation and time management</label>
+        <label><input type="checkbox" name="skills" value="Leadership and teamwork" /> Leadership and teamwork</label>
+        <label><input type="checkbox" name="skills" value="Research and learning fast" /> Research and learning fast</label> <br />
+      </fieldset>
+
+      <!-- Q6 -->
+      <fieldset>
+        <legend>6. What are your long-term career interests in the tech industry? (Choose all that apply)</legend>
+        <label><input type="checkbox" name="career_interests" value="Software development or engineering" /> Software development or engineering</label>
+        <label><input type="checkbox" name="career_interests" value="Data science or analytics" /> Data science or analytics</label>
+        <label><input type="checkbox" name="career_interests" value="Product or project management" /> Product or project management</label>
+        <label><input type="checkbox" name="career_interests" value="Digital marketing or content creation" /> Digital marketing or content creation</label>
+        <label><input type="checkbox" name="career_interests" value="UI/UX design or graphics" /> UI/UX design or graphics</label>
+        <label><input type="checkbox" name="career_interests" value="Tech support or IT administration" /> Tech support or IT administration</label>
+        <label><input type="checkbox" name="career_interests" value="Cybersecurity" /> Cybersecurity</label>
+        <label><input type="checkbox" name="career_interests" value="Tech entrepreneurship" /> Tech entrepreneurship</label>
+        <label><input type="checkbox" name="career_interests" value="Not sure yet" /> Not sure yet</label> <br />
+      </fieldset>
+
+      <!-- Q7 -->
+      <fieldset>
+        <legend>7. Are you more interested in working for:</legend>
+        <select name="work_interest" required>
+          <option value="">Select</option>
+          <option value="large_tech_company">A large tech company</option>
+          <option value="startup_small_business">A startup or small business</option>
+          <option value="government_public_sector">Government or public sector using tech</option>
+          <option value="own_venture">Starting your own tech venture</option>
+          <option value="not_sure">I’m not sure yet</option>
+        </select>
+      </fieldset>
+      <br /> 
+
+      <!-- Q8 -->
+      <fieldset>
+        <legend>8. What kind of work environment would you prefer?</legend>
+        <select name="work_environment" required>
+          <option value="">Select</option>
+          <option value="remote_hybrid">Remote or hybrid (flexible)</option>
+          <option value="office_based">Office-based with structured roles</option>
+          <option value="hands_on">Hands-on or field-based</option>
+          <option value="fast_paced">A fast-paced, innovative team</option>
+          <option value="open">I’m open to anything</option> <br />
+        </select>
+      </fieldset>
+      <br />  
+
+      <!-- Q9 -->
+      <fieldset>
+        <legend>9. What challenges have you faced while preparing for a tech career?</legend>
+        <textarea name="challenges" rows="4" placeholder="Type your answer here..."></textarea> <br />
+      </fieldset>
+      <br />  
+
+      <!-- Q10 -->
+      <fieldset>
+        <legend>10. What is your ultimate career goal after graduation?</legend>
+        <textarea name="career_goal" rows="4" placeholder="Type your answer here..."></textarea> <br />
+      </fieldset>
+
+      <button type="submit">Submit Quiz</button>
+    </form>
+  </div>
+
+  <div id="loading" aria-live="polite" style="display:none;">
+    <p>Generating your personalised recommendation... Please wait.</p>
+  </div>
+
+  <div id="result"></div>
+
+<!-- Toggle button -->
+<button id="toggleHistoryBtn" type="button">Show Previous Recommendations</button>
+
+<!-- Collapsible wrapper (hidden by default) -->
+<div id="historyWrapper" class="hidden">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+    <h4 style="margin:0;">Previous Recommendations</h4>
+    <button id="clearHistoryBtn" type="button">Clear History</button>
+  </div>
+  <div id="recommendationHistory" style="margin-top:8px;"></div>
+</div>
+
+
+
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>© 2025 Career Guidance. All rights reserved.</p>
+    <p>Contact us: <a href="mailto:support@careerguidance.com">support@careerguidance.com</a></p>
+  </footer>
+
+  <!-- JS: keep your carousel first (non-module) -->
+  <script src="carousel.js" defer></script>
+
+  <!-- Firebase & app scripts (all as modules; order matters) -->
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="firebase.js"></script>
+  <script type="module" src="signup.js"></script>
+  <script type="module" src="script.js"></script>
+  <script type="module" src="recommendation.js"></script>
+</body>
+</html>

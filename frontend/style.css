@@ -1,0 +1,796 @@
+body {
+    font-family: 'Raleway', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #ececec;
+    color: #000000;
+}
+
+/* Header styles (same as before) */
+.career-quiz-header {
+  display: flex;
+  top: 0;
+  left: 0;
+  align-items: center;
+  gap: 0px;
+  padding: 20px 60px;
+  position: fixed;
+  z-index: 1000;
+  width: 100%;
+  height: 30px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  background: #6f00ac;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Space between logo and app name */
+}
+
+.app-logo {
+  height: 30px;
+  width: auto;
+  object-fit: contain;
+  align-items: normal;
+  ;
+}
+
+.career-quiz-header nav ul {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+  margin: 10px 100px;
+  padding: 0;
+}
+
+.career-quiz-header nav ul li a {
+  text-decoration: none;
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  padding: 8px 15px; /* Gives a button-like space */
+  border-radius: 5px; /* Rounded corners */
+}
+
+.career-quiz-header nav ul li a:hover {
+  background-color: #ffffff; /* Your button background colour */
+  color: rgb(0, 0, 0); /* Text colour on hover */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* Subtle button shadow */
+}
+
+/* Hero Section */
+.hero-section {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding: 40px 20px;
+  flex-wrap: wrap;
+  background-color: #f5f7fa;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-image {
+  flex: 1 1 400px;
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  object-fit: cover;
+}
+
+.hero-text {
+  position: absolute;
+  top: 70%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 3% ;
+  border-radius: 15px;
+  width: 80%;
+}
+
+.hero-text h2 {
+  font-size: 3.2rem;
+  margin-bottom: 15px;
+}
+
+.hero-text p {
+  font-size: 1.5rem;
+  margin-bottom: 25px;
+  line-height: 1.0;
+}
+
+.hero-text button {
+  background-color: #6f00ac;
+  color: white;
+  border: none;
+  padding: 14px 32px;
+  font-size: 1.3rem;
+  font-family: "Raleway";
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.hero-text button:hover {
+  background-color: #141414;
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    flex-direction: column;
+    text-align: center;
+  }
+  .hero-text {
+    max-width: 100%;
+  }
+  .hero-image {
+    flex: none;
+    max-width: 100%;
+    margin-bottom: 20px;
+    margin-top: 0px;
+  }
+}
+
+.hero-text button {
+  background-color: #6f00ac;
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.hero-text button:hover {
+  background-color: #000000;
+}
+
+.hero-btn {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 5px;
+    text-decoration: none;
+}
+
+.hero-btn:hover {
+    background-color: #45a049;
+}
+
+/* Intro Section */
+.about {
+    padding: 40px 20px;
+    text-align: center;
+    background: #ececec;
+    height: 6%;
+    font-size: 1.3rem;
+}
+
+.intro h2 {
+    margin-bottom: 15px;
+    font-size: 3.2rem;
+}
+
+
+/* Quiz Section */
+/* Scope styles inside a container to avoid global effects */
+.career-quiz-container {
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+  background: #ffffff; /* optional: can remove if your page has its own bg */
+}
+
+.career-quiz-card {
+  background: #6f00ac;
+  max-width: 700px;
+  width: 100%;
+  padding: 30px 40px;
+  border-radius: 12px;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+  box-sizing: border-box;
+  color: #ffffff;
+}
+
+.career-quiz-card h3 {
+  margin-top: 0;
+  text-align: center;
+  font-size: 2.0rem;
+  margin-bottom: 25px;
+  color: #f0bdec;
+}
+
+.career-quiz-card fieldset {
+  border: none;
+  margin-bottom: 10px;
+  padding: 0;
+}
+
+.career-quiz-card legend {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+  color: #ffffff;
+}
+
+.career-quiz-card label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.career-quiz-card input[type="checkbox"],
+.career-quiz-card input[type="radio"] {
+  margin-right: 10px;
+  transform: scale(1.1);
+  vertical-align: middle;
+}
+
+.career-quiz-card select,
+.career-quiz-card textarea {
+  width: 90%;
+  font-size: 1rem;
+  padding: 8px 12px;
+  border: 1.8px solid #ccc;
+  border-radius: 6px;
+  resize: vertical;
+  font-family: inherit;
+  transition: border-color 0.3s ease;
+}
+
+.career-quiz-card select:focus,
+.career-quiz-card textarea:focus {
+  border-color: #4a90e2;
+  outline: none;
+  box-shadow: 0 0 6px rgba(74, 144, 226, 0.4);
+}
+
+.career-quiz-card button[type="submit"] {
+  background-color: #000000;
+  border: none;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.career-quiz-card button[type="submit"]:hover {
+  background-color: #70ea15;
+}
+
+#result {
+  max-width: 700px;
+  margin: 25px auto 0 auto;
+  background: #fff;
+  border-radius: 12px;
+  padding: 25px 30px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+  font-size: 1rem;
+  color: #222;
+  white-space: pre-wrap; /* Preserve line breaks */
+  font-family: 'Raleway', sans-serif;
+}
+
+/* Footer */
+.app-footer {
+  text-align: center;
+  padding: 20px;
+  background-color: #6f00ac;
+  color: #fff;
+  font-size: 0.9rem;
+  margin-top: 60px;
+  user-select: none;
+}
+
+.app-footer a {
+  color: #6f00ac;
+  text-decoration: none;
+}
+
+.app-footer a:hover {
+  text-decoration: underline;
+}
+
+footer {
+    background: #6f00ac;
+    color: white;
+    padding: 15px;
+    text-align: center;
+  
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .career-quiz-card {
+    padding: 20px 25px;
+  }
+
+  .career-quiz-header {
+    flex-direction: column;
+    gap: 12px;
+    padding: 15px;
+  }
+
+  .app-title {
+    font-size: 1.5rem;
+  }
+  
+  button[type="submit"] {
+    padding: 12px 18px;
+    font-size: 1rem;
+  }
+}
+
+input, select, textarea, button {
+  transition: all 0.3s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 6px rgba(74, 144, 226, 0.4);
+  outline: none;
+}
+
+button:hover {
+  background-color: #6f00ac;
+  transform: scale(1.03);
+}
+
+#loading p {
+  font-style: italic;
+  color: #4a90e2;
+  font-weight: 600;
+}
+
+/* Modal Background */
+.auth-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+}
+
+/* Modal Content */
+.auth-modal-content {
+    background: white;
+    width: 300px;
+    padding: 20px;
+    margin: 100px auto;
+    border-radius: 8px;
+    position: relative;
+}
+
+/* Close Button */
+.auth-close {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    cursor: pointer;
+    font-size: 20px;
+}
+
+/* Tabs */
+.auth-tabs {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 15px;
+}
+
+.auth-tabs button {
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    background: none;
+    font-weight: bold;
+}
+
+.auth-tabs button.active {
+    color: blue;
+    border-bottom: 2px solid blue;
+}
+
+/* Forms */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.auth-form input {
+    margin-bottom: 10px;
+    padding: 8px;
+}
+
+.auth-form button {
+    padding: 10px;
+    background: blue;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+/* Hide Elements */
+.hidden {
+    display: none;
+}
+
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  margin: 10% auto;
+  width: 300px;
+  border-radius: 8px;
+}
+
+.close {
+  float: right;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+
+
+
+
+
+
+.carousel {
+  position: relative;
+  height: 100%;
+}
+
+.slide {
+  display: none;
+  position: relative;
+  height: 100%;
+}
+
+.slide.active {
+  display: block;
+}
+
+.slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Arrows - hidden by default */
+.prev, .next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.prev { left: 20px; }
+.next { right: 20px; }
+
+.prev:hover, .next:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* Dots - hidden by default */
+.dots {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.dot {
+  height: 12px;
+  width: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  margin: 0 5px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.dot.active {
+  background: #bd05ad;
+}
+
+/* Show controls on hover */
+.hero-section:hover .prev,
+.hero-section:hover .next,
+.hero-section:hover .dots {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.slide {
+    display: none;
+    position: relative;
+}
+.slide.active {
+    display: block;
+}
+.dot.active {
+    background-color: #333; /* highlight active dot */
+}
+
+.about-section {
+  padding: 60px 20px;
+  background-color: #f9f9f9;
+}
+
+.nextmove {
+  padding: 40px 20px;
+  background-color: #e0b5f8;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 10px;
+  color: black;
+}
+
+.section-subtitle {
+  font-size: 1.2rem;
+  text-align: center;
+  margin-bottom: 40px;
+  color: #555;
+}
+
+.cards-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  width: 80%;
+  margin: 0 auto;
+  justify-content: center;
+  color: #ffffff;
+  padding: 20px 0;
+}
+
+/* Individual card styling */
+.card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background-color: rgb(0, 0, 0);
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.card-img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+/* Alternate image position */
+.card-img.left {
+  order: 0; /* image first */
+}
+
+.card-img.right {
+  order: 1; /* image after content */
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.card-text {
+  font-size: 1rem;
+  color: #6f6a72;
+}
+
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .card-img.left, .card-img.right {
+    order: 0;
+  }
+
+  .cards-container{
+    width: 85%;
+    grid-template-columns: 1fr;
+  }
+}
+
+
+nav button {
+  background: #ffffff;
+  color: rgb(0, 0, 0);
+  border: none;
+  margin-left: 10px;
+  cursor: pointer;
+  font-family: 'Raleway', sans-serif;
+  font-weight: bold;
+  padding: 3px 10px; /* Gives a button-like space */
+  border-radius: 5px; /* Rounded corners */
+}
+
+.modal {
+  display: none; 
+  position: fixed;
+  z-index: 1000;
+  padding-top: 100px;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(155, 9, 143, 0.6);
+}
+
+.modal-content {
+  background: white;
+  margin: auto;
+  padding: 20px;
+  border-radius: 8px;
+  width: 40%;
+  height: 45%;
+  text-align: center;
+  position: relative;
+  font-family: 'Raleway';
+}
+
+.modal-content input {
+  display: block;
+  width: 90%;
+  padding: 9px;
+  margin: 10px 13px;
+}
+
+.modal-content button {
+  background: #6f00ac;
+  color: white;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.modal-content button:hover {
+    background: #000000;
+}
+
+.close {
+  position: absolute;
+  right: 10px;
+  top: 5px;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+
+#recommendationHistory {
+  margin-top: 40px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 12px;
+}
+
+.history-item {
+  padding: 15px;
+  margin-bottom: 15px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.toggleHistoryBtn {
+  background: #6f00ac;
+  color: #fff;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-family: "Raleway", sans-serif;
+  transition: background 0.3s ease;
+}
+
+.toggleHistoryBtn:hover {
+  background: #000000;
+}
+
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, padding 0.3s ease;
+  background: #f9f9f9;
+  border-radius: 8px;
+  margin-top: 10px;
+  padding: 0 12px;
+}
+
+.accordion-content.open {
+  max-height: 1000px; /* big enough to fit content */
+  padding: 12px;
+}
+
+.toggleHistoryBtn {
+  padding: 15px;
+  margin-bottom: 15px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.clearHistoryBtn {
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: #6f00ac;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: "Raleway";
+  transition: background 0.3s ease;
+}
+
+.clearHistoryBtn:hover {
+  background: #000000;
+}
+
+.hidden { display: none; }
