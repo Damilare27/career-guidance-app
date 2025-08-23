@@ -4,6 +4,15 @@ import { db } from "./firebase-config.js";
 import { doc, collection, addDoc, serverTimestamp, getDocs } 
   from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
+// ------------------ API Base URL ------------------
+// Railway deployed URL
+const DEPLOYED_API_BASE = "https://web-production-73868.up.railway.app";
+
+// Local development fallback
+const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+    ? "http://127.0.0.1:8000"
+    : DEPLOYED_API_BASE;
+
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("quizForm");
   const loadingDiv = document.getElementById("loading");
@@ -86,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const careerGoal = formData.get("career_goal") || "";
 
     try {
-      const response = await fetch("https://web-production-73868.up.railway.app", {
+      const response = await fetch(`${API_BASE}/api/recommend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -163,4 +172,3 @@ document.addEventListener("DOMContentLoaded", () => {
     if (user) loadPreviousRecommendations();
   });
 });
-
