@@ -7,6 +7,11 @@ from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 import os, json
 import asyncio
+import os
+from pathlib import Path
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+import json
 
 # Similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -31,6 +36,9 @@ app.add_middleware(
 )
 
 # Serve frontend static files
+BASE_DIR = Path(__file__).resolve().parent.parent  # goes up to project root
+FRONTEND_PATH = BASE_DIR / "frontend"
+
 app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
 
 # ---------- Load dataset ----------
@@ -183,6 +191,7 @@ async def recommend(payload: RecommendPayload):
         "alternatives": alternatives,
         "ai_summary": ai_summary
     }
+
 
 
 
