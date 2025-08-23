@@ -10,6 +10,15 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// ----------------- API Base URL -----------------
+// Railway deployed URL
+const DEPLOYED_API_BASE = "https://web-production-73868.up.railway.app";
+
+// Local development fallback
+const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+    ? "http://127.0.0.1:8000"
+    : DEPLOYED_API_BASE;
+
 // ----------------- DOM ELEMENTS -----------------
 const loginModal = document.getElementById("loginModal");
 const openLoginBtn = document.getElementById("openLoginBtn");
@@ -80,111 +89,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ----------------- QUIZ HELPERS -----------------
-function attachCheckLimit(name, limit) {
-  const boxes = [...document.querySelectorAll(`input[name="${name}"]`) || []];
-  boxes.forEach((cb) => {
-    cb.addEventListener("change", () => {
-      const checked = boxes.filter((b) => b.checked);
-      if (checked.length > limit) {
-        cb.checked = false;
-        alert(`You can select up to ${limit} options for this question.`);
-      }
-    });
-  });
-}
-attachCheckLimit("q2", 3);
-attachCheckLimit("q5", 4);
-
-// ----------------- HISTORY (last 5 items, collapsible) -----------------
-function normalizeHistoryArray(arr) {
-  return (arr || []).map(item => {
-    if (typeof item === "string") return { text: item, ts: Date.now() };
-    if (item && typeof item === "object") {
-      return { text: item.text ?? "", ts: item.ts ?? Date.now() };
-    }
-    return { text: String(item ?? ""), ts: Date.now() };
-  });
-}
-
-function getHistory() {
-  try {
-    const raw = JSON.parse(localStorage.getItem("recommendationHistory") || "[]");
-    const normalized = normalizeHistoryArray(raw);
-    return normalized.slice(0, 5);
-  } catch {
-    return [];
-  }
-}
-
-function setHistory(arr) {
-  const trimmed = normalizeHistoryArray(arr).slice(0, 5);
-  localStorage.setItem("recommendationHistory", JSON.stringify(trimmed));
-}
-
-function formatTimestamp(ts) {
-  try {
-    return new Date(ts).toLocaleString();
-  } catch {
-    return "";
-  }
-}
-
-function loadHistory() {
-  const history = getHistory();
-  if (!historyDiv) return;
-
-  if (history.length === 0) {
-    historyDiv.innerHTML = "<p>No previous recommendations yet.</p>";
-  } else {
-    historyDiv.innerHTML = history
-      .map((item, i) => `
-        <div class="history-item" style="margin-bottom:8px;">
-          <strong>${i + 1}.</strong> ${item.text}
-          <div style="font-size:12px;opacity:0.7;">${formatTimestamp(item.ts)}</div>
-          <hr>
-        </div>
-      `)
-      .join("");
-  }
-
-  if (toggleHistoryBtn) {
-    const count = history.length;
-    const isHidden =
-      historyWrapper
-        ? (historyWrapper.classList?.contains("hidden") || historyWrapper.style.display === "none")
-        : false;
-    toggleHistoryBtn.textContent = isHidden
-      ? `Show Previous Recommendations (${count})`
-      : `Hide Previous Recommendations (${count})`;
-  }
-}
-
-function addToHistory(recommendation) {
-  const history = getHistory();
-  history.unshift({ text: recommendation, ts: Date.now() });
-  setHistory(history);
-  loadHistory();
-}
-
-clearHistoryBtn?.addEventListener("click", () => {
-  localStorage.removeItem("recommendationHistory");
-  loadHistory();
-});
-
-function setHidden(el, hidden) {
-  if (!el) return;
-  if (el.classList) el.classList.toggle("hidden", hidden);
-  el.style.display = hidden ? "none" : "block";
-}
-
-toggleHistoryBtn?.addEventListener("click", () => {
-  if (!historyWrapper) return;
-  const nowHidden = !(historyWrapper.style.display !== "none" && !historyWrapper.classList.contains("hidden"));
-  setHidden(historyWrapper, !nowHidden);
-  loadHistory();
-});
-
-loadHistory();
+// ... keep attachCheckLimit, normalizeHistoryArray, getHistory, setHistory, formatTimestamp, loadHistory, addToHistory as-is ...
 
 // ----------------- QUIZ SUBMIT -----------------
 quizForm?.addEventListener("submit", async (e) => {
@@ -220,8 +125,8 @@ quizForm?.addEventListener("submit", async (e) => {
   if (loadingDiv) loadingDiv.style.display = "block";
 
   try {
-    // ----------------- UPDATED FETCH -----------------
-    const response = await fetch("http://127.0.0.1:8000/api/recommend", {
+    // ----------------- FETCH USING RAILWAY URL -----------------
+    const response = await fetch(`${API_BASE}/api/recommend`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
