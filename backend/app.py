@@ -18,7 +18,7 @@ from openai import OpenAI
 # ---------- Paths ----------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "..", "job_data", "jobs_dataset.json")
-FRONTEND_PATH = os.path.join(HERE, "/frontend")
+FRONTEND_PATH = os.path.join(BASE_DIR, "frontend")
 
 # ---------- FastAPI ----------
 app = FastAPI()
@@ -183,5 +183,6 @@ async def recommend(payload: RecommendPayload):
         "alternatives": alternatives,
         "ai_summary": ai_summary
     }
+
 
 
