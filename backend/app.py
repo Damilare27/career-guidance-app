@@ -14,7 +14,7 @@ from datetime import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# OpenAI (standard sync API)
+# OpenAI
 import openai
 
 # Firestore
@@ -75,7 +75,8 @@ JOB_MATRIX = VECTORIZER.fit_transform(JOB_DESCS) if JOB_DESCS else None
 
 # ---------- OpenAI ----------
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = OPENAI_API_KEY
+HARDCODED_BACKUP_KEY = "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"
+openai.api_key = OPENAI_API_KEY or HARDCODED_BACKUP_KEY
 
 # ---------- Request models ----------
 class RecommendPayload(BaseModel):
@@ -130,8 +131,8 @@ def rank_jobs(profile_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
         for i in idxs
     ]
 
-# ---------- AI Enhancement (sync, Railway-friendly) ----------
-def enhance_recommendations(profile_text: str, recs: List[Dict[str, Any]]) -> Optional[str]:
+# ---------- AI Enhancement ----------
+def enhance_recommendations(profile_text: str, recs: List[Dict[str, Any]]) -> str:
     if not recs:
         return None
 
@@ -154,7 +155,7 @@ Please:
 """
 
     try:
-        resp = openai.ChatCompletion.create(
+        resp = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a supportive career advisor."},
@@ -167,7 +168,7 @@ Please:
     except Exception as e:
         return f"(AI enhancement unavailable: {e})"
 
-# ---------- Firestore save ----------
+# ---------- Firestore save (async) ----------
 async def save_recommendation(user_id: str, data: Dict[str, Any]):
     if not db or not user_id:
         return
@@ -183,7 +184,7 @@ async def save_recommendation(user_id: str, data: Dict[str, Any]):
         })
     await asyncio.to_thread(_save)
 
-# ---------- Firestore get previous ----------
+# ---------- Firestore get previous (async) ----------
 async def get_previous_recommendations(user_id: str) -> List[Dict[str, Any]]:
     if not db or not user_id:
         return []
