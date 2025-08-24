@@ -243,4 +243,18 @@ else:
     print(f"Warning: FRONTEND_PATH does not exist: {FRONTEND_PATH}")
 
 
+# ---------- Network Test ----------
+@app.get("/api/test-openai")
+async def test_openai():
+    if not OPENAI_API_KEY:
+        return {"error": "OPENAI_API_KEY not set"}
+
+    try:
+        # Try fetching available models from OpenAI
+        resp = await client.models.list()
+        models = [m.id for m in resp.data[:5]]  # just show first 5 models
+        return {"status": "ok", "models": models}
+    except Exception as e:
+        return {"error": str(e)}
+
 
