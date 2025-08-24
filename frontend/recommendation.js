@@ -1,4 +1,4 @@
-// ------------------ recommendations.js ------------------
+// ------------------ recommendations.js (Render-ready) ------------------
 import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -10,15 +10,13 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!form || !loadingDiv || !resultDiv || !historyDiv) return;
 
   const auth = getAuth();
-
-  // ------------------ RENDER BACKEND URL ------------------
-  const BACKEND_URL = "https://your-render-service.onrender.com"; // <--- replace with your Render URL
+  const API_BASE = "https://career-guidance-app-yee0.onrender.com/"; // <-- Replace with your Render URL
 
   // ------------------ Helpers ------------------
   const cleanDescription = (text) =>
     text ? (text.endsWith("...") ? text.slice(0, -3) + "." : text) : "No description available.";
 
-  const truncate = (str, n = 200) => (str && str.length > n ? str.substring(0, n) + "…" : str || "");
+  const truncate = (str, n = 200) => (str.length > n ? str.substring(0, n) + "…" : str);
 
   const formatDateTime = (isoString) => {
     if (!isoString) return "";
@@ -35,9 +33,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const resp = await fetch(`${BACKEND_URL}/api/recommendations/${user.uid}`);
-      if (!resp.ok) throw new Error(`HTTP error ${resp.status}`);
-      const data = await resp.json();
+      const response = await fetch(`${API_BASE}/api/recommendations/${user.uid}`);
+      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+      const data = await response.json();
       const recs = data.recommendations || [];
 
       if (!recs.length) {
@@ -45,30 +43,30 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      historyDiv.innerHTML = recs
-        .map((r) => {
-          const best = r.best_match?.job_title || "N/A";
-          const alternatives = (r.alternatives || []).map((j) => j.job_title).join(", ") || "N/A";
-          const aiSummary = truncate(r.ai_summary || "No AI explanation available", 300);
-          const createdAt = formatDateTime(r.timestamp);
+      const items = recs.map((r) => {
+        const best = r.best_match?.job_title || "N/A";
+        const alternatives = (r.alternatives || []).map((j) => j.job_title).join(", ") || "N/A";
+        const aiSummary = truncate(r.ai_summary || "No AI explanation available", 300);
+        const createdAt = formatDateTime(r.timestamp);
 
-          return `
-            <div class="history-card" style="
-              border: 1px solid #ddd; 
-              border-radius: 8px; 
-              padding: 12px; 
-              margin-bottom: 10px; 
-              background: #f9f9f9;
-              box-shadow: 1px 1px 4px rgba(0,0,0,0.1);
-            ">
-              <p><strong>Submitted:</strong> ${createdAt}</p>
-              <p><strong>Best Match:</strong> ${best}</p>
-              <p><strong>Other Suggestions:</strong> ${alternatives}</p>
-              <p><em>${aiSummary}</em></p>
-            </div>
-          `;
-        })
-        .join("");
+        return `
+          <div class="history-card" style="
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            padding: 12px; 
+            margin-bottom: 10px; 
+            background: #f9f9f9;
+            box-shadow: 1px 1px 4px rgba(0,0,0,0.1);
+          ">
+            <p><strong>Submitted:</strong> ${createdAt}</p>
+            <p><strong>Best Match:</strong> ${best}</p>
+            <p><strong>Other Suggestions:</strong> ${alternatives}</p>
+            <p><em>${aiSummary}</em></p>
+          </div>
+        `;
+      });
+
+      historyDiv.innerHTML = items.join("");
     } catch (err) {
       console.error("Error fetching previous recommendations:", err);
       historyDiv.innerHTML = "<p style='color:red;'>⚠️ Failed to load previous recommendations.</p>";
@@ -89,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-      const response = await fetch(`${BACKEND_URL}/api/recommend`, {
+      const response = await fetch(`${API_BASE}/api/recommend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
 
       const bestJob = data.best_match || { job_title: "N/A", description: "No description available" };
-      const alternatives = data.alternatives?.length
+      const alternatives = data.alternatives.length
         ? data.alternatives
         : Array(4).fill({ job_title: "N/A", description: "No description available" });
 
