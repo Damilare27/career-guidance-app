@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 import os, json, asyncio
+from datetime import datetime
 
 # Similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -16,50 +17,60 @@ from sklearn.metrics.pairwise import cosine_similarity
 # OpenAI
 from openai import AsyncOpenAI
 
+# Firestore
+import firebase_admin
+from firebase_admin import credentials, firestore
+
 # ---------- Paths ----------
-BASE_DIR = Path(__file__).resolve().parent.parent  # project root
+BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_PATH = BASE_DIR / "job_data" / "jobs_dataset.json"
 FRONTEND_PATH = BASE_DIR / "frontend"
 
 # ---------- FastAPI ----------
 app = FastAPI()
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # TODO: tighten later for prod
+    allow_origins=["*"],  # TODO: tighten later for prod
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# ---------- Firestore setup ----------
+FIREBASE_KEY_PATH = BASE_DIR / "firebase_key.json"  # Put your service account JSON here
+if FIREBASE_KEY_PATH.exists():
+    cred = credentials.Certificate(FIREBASE_KEY_PATH)
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+else:
+    db = None
+    print(f"Warning: Firestore not initialized. Missing key: {FIREBASE_KEY_PATH}")
+
 # ---------- Load dataset ----------
 def load_jobs() -> List[Dict[str, Any]]:
+    if not DATA_PATH.exists():
+        print(f"Warning: DATA_PATH not found: {DATA_PATH}")
+        return []
     with open(DATA_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
-
     normalized = []
     for j in data:
         title = j.get("job_title") or j.get("title") or "Untitled role"
         desc = j.get("description") or j.get("job_description") or ""
-        normalized.append({
-            **j,
-            "job_title": title,
-            "description": desc
-        })
+        normalized.append({**j, "job_title": title, "description": desc})
     return normalized
 
 JOBS = load_jobs()
 JOB_TITLES = [j["job_title"] for j in JOBS]
-JOB_DESCS  = [j["description"] for j in JOBS]
+JOB_DESCS = [j["description"] for j in JOBS]
 
-# ---------- TF-IDF (fit once at startup) ----------
+# ---------- TF-IDF ----------
 VECTORIZER = TfidfVectorizer(stop_words="english")
-JOB_MATRIX = VECTORIZER.fit_transform(JOB_DESCS)
+JOB_MATRIX = VECTORIZER.fit_transform(JOB_DESCS) if JOB_DESCS else None
 
-# ---------- OpenAI (optional) ----------
+# ---------- OpenAI ----------
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-HARDCODED_BACKUP_KEY = "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"  # replace with your backup key
-
+HARDCODED_BACKUP_KEY = "sk-your-backup-key"
 client = AsyncOpenAI(api_key=OPENAI_API_KEY or HARDCODED_BACKUP_KEY)
 
 # ---------- Request models ----------
@@ -69,22 +80,17 @@ class RecommendPayload(BaseModel):
     answers: Optional[Dict[str, Any]] = None
     top_k: int = 5
     explain: bool = True
+    user_id: Optional[str] = None  # For Firestore tracking
 
 # ---------- Quiz → keywords ----------
 def map_quiz_answers_to_keywords(answers: Dict[str, Any]) -> str:
     if not answers:
         return ""
-
     kws: List[str] = []
     for field in ["experience", "tasks", "skills", "career_interests"]:
         vals = answers.get(field) or []
         vals = [str(v).lower() for v in vals if v]
-        if field == "skills":
-            kws += vals * 2  # weight skills higher
-        else:
-            kws += vals
-
-    # Work style → expand keywords
+        kws += vals * 2 if field == "skills" else vals
     work_style = (answers.get("work_style") or "").lower()
     if work_style == "analytical":
         kws += ["analysis", "data", "problem solving", "research"]
@@ -94,14 +100,10 @@ def map_quiz_answers_to_keywords(answers: Dict[str, Any]) -> str:
         kws += ["hands-on", "implementation", "technical", "operations"]
     elif work_style:
         kws.append(work_style)
-
-    # Other fields
     for field in ["work_interest", "work_environment", "challenges", "career_goal"]:
         val = (answers.get(field) or "").strip().lower()
         if val:
             kws.append(val)
-
-    # Confidence weighting
     try:
         conf = int(answers.get("confidence") or 0)
         if conf >= 8:
@@ -110,12 +112,11 @@ def map_quiz_answers_to_keywords(answers: Dict[str, Any]) -> str:
             kws += ["entry level", "junior", "training"]
     except Exception:
         pass
-
     return " ".join(kws)
 
 # ---------- Ranking ----------
 def rank_jobs(profile_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
-    if not profile_text.strip():
+    if not profile_text.strip() or JOB_MATRIX is None:
         return []
     user_vec = VECTORIZER.transform([profile_text])
     sims = cosine_similarity(user_vec, JOB_MATRIX).flatten()
@@ -126,33 +127,27 @@ def rank_jobs(profile_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
     ]
 
 # ---------- AI Enhancement ----------
-def enhance_recommendations(profile_text: str, recs: List[Dict[str, Any]]) -> Optional[str]:
+async def enhance_recommendations(profile_text: str, recs: List[Dict[str, Any]]) -> Optional[str]:
     if not client or not recs:
         return None
-
     best_job = recs[0]
     alternatives = recs[1:3]
-
     prompt = f"""
 User profile text:
 {profile_text}
 
-Top matched jobs from dataset:
+Top matched jobs:
 1. {best_job['job_title']}: {best_job['description'][:300]}...
-
 """ + "\n".join(
-        [f"{i+2}. {alt['job_title']}: {alt['description'][:300]}..."
-         for i, alt in enumerate(alternatives)]
+        [f"{i+2}. {alt['job_title']}: {alt['description'][:300]}..." for i, alt in enumerate(alternatives)]
     ) + """
-
 Please:
 - Rephrase the best matched job description clearly.
 - Explain why it’s a good fit for the user.
 - Provide two alternative suggestions, concise and engaging.
 """
-
     try:
-        resp = client.chat.completions.create(
+        resp = await client.chat.completions.acreate(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a supportive career advisor."},
@@ -164,6 +159,36 @@ Please:
         return resp.choices[0].message.content.strip()
     except Exception as e:
         return f"(AI enhancement unavailable: {e})"
+
+# ---------- Firestore save (async) ----------
+async def save_recommendation(user_id: str, data: Dict[str, Any]):
+    if not db or not user_id:
+        return
+    def _save():
+        doc_ref = db.collection("recommendations").document()
+        data_to_save = {
+            "user_id": user_id,
+            "profile_used": data.get("profile_used"),
+            "best_match": data.get("best_match"),
+            "alternatives": data.get("alternatives"),
+            "ai_summary": data.get("ai_summary"),
+            "timestamp": datetime.utcnow()
+        }
+        doc_ref.set(data_to_save)
+    await asyncio.to_thread(_save)
+
+# ---------- Firestore get previous (async) ----------
+async def get_previous_recommendations(user_id: str) -> List[Dict[str, Any]]:
+    if not db or not user_id:
+        return []
+    def _fetch():
+        docs = db.collection("recommendations")\
+            .where("user_id", "==", user_id)\
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)\
+            .limit(10)\
+            .stream()
+        return [doc.to_dict() for doc in docs]
+    return await asyncio.to_thread(_fetch)
 
 # ---------- API ----------
 @app.get("/api/jobs")
@@ -182,22 +207,29 @@ async def recommend(payload: RecommendPayload):
 
     profile_text = " ".join([p for p in parts if p]).strip()
     if not profile_text:
-        return JSONResponse(
-            content={"error": "No input provided."},
-            status_code=400
-        )
+        return JSONResponse({"error": "No input provided."}, status_code=400)
 
     recs = rank_jobs(profile_text, payload.top_k or 5)
-    ai_summary = enhance_recommendations(profile_text, recs) if payload.explain else None
+    ai_summary = await enhance_recommendations(profile_text, recs) if payload.explain else None
 
-    return {
+    result = {
         "profile_used": profile_text,
         "best_match": recs[0] if recs else None,
         "alternatives": recs[1:3] if len(recs) > 1 else [],
         "ai_summary": ai_summary
     }
 
-# ---------- Serve frontend (MOUNT LAST so it doesn’t swallow /api/*) ----------
+    if payload.user_id:
+        await save_recommendation(payload.user_id, result)
+
+    return result
+
+@app.get("/api/recommendations/{user_id}")
+async def get_user_recommendations(user_id: str):
+    recs = await get_previous_recommendations(user_id)
+    return {"recommendations": recs}
+
+# ---------- Serve frontend ----------
 if FRONTEND_PATH.exists():
     app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
 else:
