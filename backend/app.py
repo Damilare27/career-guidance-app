@@ -30,12 +30,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve frontend static files
-if FRONTEND_PATH.exists():
-    app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
-else:
-    print(f"Warning: FRONTEND_PATH does not exist: {FRONTEND_PATH}")
-
 # ---------- Load dataset ----------
 def load_jobs() -> List[Dict[str, Any]]:
     if not DATA_PATH.exists():
@@ -58,10 +52,11 @@ JOB_DESCS = [j["description"] for j in JOBS]
 VECTORIZER = TfidfVectorizer(stop_words="english")
 JOB_MATRIX = VECTORIZER.fit_transform(JOB_DESCS) if JOB_DESCS else None
 
-# ---------- OpenAI ----------
+# ---------- OpenAI (optional) ----------
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-HARDCODED_BACKUP_KEY = "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"
-client = OpenAI(api_key=OPENAI_API_KEY or HARDCODED_BACKUP_KEY)
+HARDCODED_BACKUP_KEY = "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"  # replace with your backup key
+
+client = AsyncOpenAI(api_key=OPENAI_API_KEY or HARDCODED_BACKUP_KEY)
 
 # ---------- Request models ----------
 class RecommendPayload(BaseModel):
@@ -189,3 +184,9 @@ async def recommend(payload: RecommendPayload):
         "alternatives": alternatives,
         "ai_summary": ai_summary
     }
+
+# ---------- Serve frontend (MOUNT LAST so it doesn’t swallow /api/*) ----------
+if FRONTEND_PATH.exists():
+    app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
+else:
+    print(f"Warning: FRONTEND_PATH does not exist: {FRONTEND_PATH}")
