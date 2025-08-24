@@ -13,7 +13,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # OpenAI
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 # ---------- Paths ----------
 BASE_DIR = Path(__file__).resolve().parent.parent  # project root
@@ -190,3 +190,4 @@ if FRONTEND_PATH.exists():
     app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
 else:
     print(f"Warning: FRONTEND_PATH does not exist: {FRONTEND_PATH}")
+
