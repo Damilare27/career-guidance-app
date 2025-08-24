@@ -15,7 +15,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # OpenAI
-import openai
+from openai import AsyncOpenAI
 
 # Firestore
 import firebase_admin
@@ -76,7 +76,7 @@ JOB_MATRIX = VECTORIZER.fit_transform(JOB_DESCS) if JOB_DESCS else None
 # ---------- OpenAI ----------
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 HARDCODED_BACKUP_KEY = "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"
-openai.api_key = OPENAI_API_KEY or HARDCODED_BACKUP_KEY
+client = AsyncOpenAI(api_key=OPENAI_API_KEY or HARDCODED_BACKUP_KEY)
 
 # ---------- Request models ----------
 class RecommendPayload(BaseModel):
@@ -132,8 +132,8 @@ def rank_jobs(profile_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
     ]
 
 # ---------- AI Enhancement ----------
-def enhance_recommendations(profile_text: str, recs: List[Dict[str, Any]]) -> str:
-    if not recs:
+async def enhance_recommendations(profile_text: str, recs: List[Dict[str, Any]]) -> Optional[str]:
+    if not client or not recs:
         return None
 
     best_job = recs[0]
@@ -155,7 +155,8 @@ Please:
 """
 
     try:
-        resp = openai.chat.completions.create(
+        # ✅ Correct async call
+        resp = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a supportive career advisor."},
@@ -164,7 +165,7 @@ Please:
             max_tokens=500,
             temperature=0.7
         )
-        return resp.choices[0].message["content"].strip()
+        return resp.choices[0].message.content.strip()
     except Exception as e:
         return f"(AI enhancement unavailable: {e})"
 
@@ -217,7 +218,7 @@ async def recommend(payload: RecommendPayload):
         return JSONResponse({"error": "No input provided."}, status_code=400)
 
     recs = rank_jobs(profile_text, payload.top_k or 5)
-    ai_summary = enhance_recommendations(profile_text, recs) if payload.explain else None
+    ai_summary = await enhance_recommendations(profile_text, recs) if payload.explain else None
 
     result = {
         "profile_used": profile_text,
@@ -241,3 +242,5 @@ if FRONTEND_PATH.exists():
     app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
 else:
     print(f"Warning: FRONTEND_PATH does not exist: {FRONTEND_PATH}")
+
+
