@@ -37,9 +37,7 @@ app.add_middleware(
 )
 
 # ---------- Firestore setup ----------
-# Load Firebase credentials from Railway env variable
 firebase_key_json = os.getenv("FIREBASE_KEY")
-
 db = None
 if firebase_key_json:
     try:
@@ -167,7 +165,7 @@ Please:
     except Exception as e:
         return f"(AI enhancement unavailable: {e})"
 
-# ---------- Firestore save (async) ----------
+# ---------- Firestore save ----------
 async def save_recommendation(user_id: str, data: Dict[str, Any]):
     if not db or not user_id:
         return
@@ -184,7 +182,7 @@ async def save_recommendation(user_id: str, data: Dict[str, Any]):
         doc_ref.set(data_to_save)
     await asyncio.to_thread(_save)
 
-# ---------- Firestore get previous (async) ----------
+# ---------- Firestore get previous ----------
 async def get_previous_recommendations(user_id: str) -> List[Dict[str, Any]]:
     if not db or not user_id:
         return []
@@ -241,4 +239,3 @@ if FRONTEND_PATH.exists():
     app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
 else:
     print(f"Warning: FRONTEND_PATH does not exist: {FRONTEND_PATH}")
-
