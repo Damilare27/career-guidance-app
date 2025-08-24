@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 from pathlib import Path
-import json, os
+import json, os, logging
 from datetime import datetime
 from random import sample
 
@@ -254,4 +254,5 @@ def test_openai():
         return {"status": "ok", "models": models}
     except Exception as e:
         return {"error": str(e)}
+
 
