@@ -48,10 +48,10 @@ client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 # ---------- Firestore ----------
 db = None
-FIREBASE_KEY_JSON = os.getenv("FIREBASE_KEY_JSON")  # Store private key as Render secret
-if FIREBASE_KEY_JSON:
+FIREBASE_KEY = os.getenv("FIREBASE_KEY")  # Store private key as Render secret
+if FIREBASE_KEY:
     try:
-        cred_dict = json.loads(FIREBASE_KEY_JSON)
+        cred_dict = json.loads(FIREBASE_KEY)
         cred = credentials.Certificate(cred_dict)
         firebase_admin.initialize_app(cred)
         db = firestore.client()
@@ -59,7 +59,7 @@ if FIREBASE_KEY_JSON:
     except Exception as e:
         logging.error(f"❌ Firestore init failed: {e}")
 else:
-    logging.warning("⚠️ FIREBASE_KEY_JSON not provided; Firestore disabled")
+    logging.warning("⚠️ FIREBASE_KEY not provided; Firestore disabled")
 
 # ---------- Load dataset ----------
 def load_jobs() -> List[Dict[str, Any]]:
@@ -238,4 +238,5 @@ def test_openai():
         return {"status": "ok", "models": models}
     except Exception as e:
         return {"error": str(e)}
+
 
