@@ -1,94 +1,150 @@
 // ------------------ recommendations.js ------------------
-
 import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-import { db } from "./firebase-config.js";
-import { doc, collection, addDoc, serverTimestamp }
-from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("quizForm");
   const loadingDiv = document.getElementById("loading");
   const resultDiv = document.getElementById("result");
+  const historyDiv = document.getElementById("historyList");
 
-  if (!form || !loadingDiv || !resultDiv) return;
+  if (!form || !loadingDiv || !resultDiv || !historyDiv) return;
 
   const auth = getAuth();
 
-  // ------------------ Handle form submission ------------------
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  // ------------------ RENDER BACKEND URL ------------------
+  const BACKEND_URL = "https://your-render-service.onrender.com"; // <--- replace with your Render URL
 
-    resultDiv.innerHTML = "";
-    loadingDiv.style.display = "block";
+  // ------------------ Helpers ------------------
+  const cleanDescription = (text) =>
+    text ? (text.endsWith("...") ? text.slice(0, -3) + "." : text) : "No description available.";
 
-    const formData = new FormData(form);
-    const careerGoal = formData.get("career_goal") || "";
+  const truncate = (str, n = 200) => (str && str.length > n ? str.substring(0, n) + "…" : str || "");
+
+  const formatDateTime = (isoString) => {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  };
+
+  // ------------------ Load previous recommendations ------------------
+  async function loadPreviousRecommendations() {
+    const user = auth.currentUser;
+    if (!user) {
+      historyDiv.innerHTML = "<p>Please log in to see previous recommendations.</p>";
+      return;
+    }
 
     try {
-      // ------------------ Ask backend for ranked jobs ------------------
-      const response = await fetch("https://web-production-73868.up.railway.app/api/recommend", {
+      const resp = await fetch(`${BACKEND_URL}/api/recommendations/${user.uid}`);
+      if (!resp.ok) throw new Error(`HTTP error ${resp.status}`);
+      const data = await resp.json();
+      const recs = data.recommendations || [];
+
+      if (!recs.length) {
+        historyDiv.innerHTML = "<p>No previous recommendations yet.</p>";
+        return;
+      }
+
+      historyDiv.innerHTML = recs
+        .map((r) => {
+          const best = r.best_match?.job_title || "N/A";
+          const alternatives = (r.alternatives || []).map((j) => j.job_title).join(", ") || "N/A";
+          const aiSummary = truncate(r.ai_summary || "No AI explanation available", 300);
+          const createdAt = formatDateTime(r.timestamp);
+
+          return `
+            <div class="history-card" style="
+              border: 1px solid #ddd; 
+              border-radius: 8px; 
+              padding: 12px; 
+              margin-bottom: 10px; 
+              background: #f9f9f9;
+              box-shadow: 1px 1px 4px rgba(0,0,0,0.1);
+            ">
+              <p><strong>Submitted:</strong> ${createdAt}</p>
+              <p><strong>Best Match:</strong> ${best}</p>
+              <p><strong>Other Suggestions:</strong> ${alternatives}</p>
+              <p><em>${aiSummary}</em></p>
+            </div>
+          `;
+        })
+        .join("");
+    } catch (err) {
+      console.error("Error fetching previous recommendations:", err);
+      historyDiv.innerHTML = "<p style='color:red;'>⚠️ Failed to load previous recommendations.</p>";
+    }
+  }
+
+  // ------------------ Handle quiz submission ------------------
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    resultDiv.innerHTML = "";
+    loadingDiv.style.display = "block";
+    loadingDiv.textContent = "✨ Generating your personalised recommendation... Please wait.";
+
+    const formData = new FormData(form);
+    const answers = Object.fromEntries(formData.entries());
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+      const response = await fetch(`${BACKEND_URL}/api/recommend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_input: careerGoal,
-          answers: Object.fromEntries(formData.entries()),
+          user_input: answers.career_goal || "",
+          answers: answers,
           top_k: 5,
-          explain: true
+          explain: true,
+          user_id: auth.currentUser?.uid || null
         }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
+      loadingDiv.style.display = "none";
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
-      loadingDiv.style.display = "none";
+      const bestJob = data.best_match || { job_title: "N/A", description: "No description available" };
+      const alternatives = data.alternatives?.length
+        ? data.alternatives
+        : Array(4).fill({ job_title: "N/A", description: "No description available" });
 
-      const bestJob = data.best_match;
-      const alternatives = data.alternatives || [];
-      const aiSummary = data.ai_summary || "";
+      const allJobs = [bestJob, ...alternatives].slice(0, 5);
 
-      if (!bestJob) {
-        resultDiv.innerHTML = "<p>No matching job found. Try different answers!</p>";
-        return;
-      }
+      const jobsHtml = allJobs
+        .map((job, idx) => {
+          const label = idx === 0 ? "🌟 Best Match" : `Suggestion ${idx}`;
+          return `<p><strong>${label}: ${job.job_title}</strong><br>${cleanDescription(job.description)}</p>`;
+        })
+        .join("");
 
-      // Build HTML for alternative jobs
-      const alternativesHtml = alternatives.map((job, idx) => 
-        `<p><strong>${idx + 1}. ${job.job_title}:</strong> ${job.description || "No description available"}</p>`
-      ).join("");
+      const aiSummary = data.ai_summary || "AI explanation unavailable";
 
-      // Display results
       resultDiv.innerHTML = `
-        <h3>Best-Matched Job: ${bestJob.job_title}</h3>
-        <p><strong>Description:</strong> ${bestJob.description || "No description available"}</p>
-        <h4>Other Suggestions:</h4>
-        ${alternativesHtml || "<p>None</p>"}
-        <h4>AI Explanation:</h4>
+        <h3>💼 Your Job Recommendations</h3>
+        ${jobsHtml}
+        <h4>💡 AI Explanation:</h4>
         <p><em>${aiSummary}</em></p>
       `;
 
-      // ------------------ Save to Firebase ------------------
-      const user = auth.currentUser;
-      if (user) {
-        const userRef = doc(db, "users", user.uid);
-        const historyRef = collection(userRef, "recommendations");
-
-        await addDoc(historyRef, {
-          answers: Object.fromEntries(formData.entries()),
-          bestJob: bestJob.job_title,
-          alternatives: alternatives.map(r => r.job_title),
-          ai_summary: aiSummary,
-          createdAt: serverTimestamp(),
-        });
-
-        console.log("Recommendation saved to Firebase for user:", user.uid);
-      } else {
-        console.warn("User not logged in. Result not saved.");
-      }
-
+      if (auth.currentUser) loadPreviousRecommendations();
     } catch (err) {
       loadingDiv.style.display = "none";
-      resultDiv.innerHTML = "<p style='color:red;'>Error fetching AI recommendation. Please try again.</p>";
+      if (err.name === "AbortError") {
+        resultDiv.innerHTML = "<p style='color:red;'>⏳ Request timed out. Please try again.</p>";
+      } else {
+        resultDiv.innerHTML = "<p style='color:red;'>⚠️ Error fetching AI recommendation. Please try again.</p>";
+      }
       console.error(err);
     }
+  });
+
+  // ------------------ Load previous recommendations on login ------------------
+  auth.onAuthStateChanged((user) => {
+    if (user) loadPreviousRecommendations();
   });
 });
