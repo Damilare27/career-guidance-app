@@ -1,23 +1,15 @@
 // ----------------- FIREBASE INIT -----------------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp } 
-  from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } 
-  from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// ----------------- API Base URL -----------------
-// Railway deployed URL
-const DEPLOYED_API_BASE = "https://web-production-73868.up.railway.app";
-
-// Local development fallback
-const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
-    ? "http://127.0.0.1:8000"
-    : DEPLOYED_API_BASE;
+// ----------------- RENDER BACKEND URL -----------------
+const BACKEND_URL = "https://your-render-service.onrender.com"; // <--- Replace with your Render service URL
 
 // ----------------- DOM ELEMENTS -----------------
 const loginModal = document.getElementById("loginModal");
@@ -30,11 +22,9 @@ const quizForm = document.getElementById("quizForm");
 const loadingDiv = document.getElementById("loading");
 const resultDiv = document.getElementById("result");
 
-// NEW: history elements
+// History elements
 const historyDiv = document.getElementById("recommendationHistory");
 const clearHistoryBtn = document.getElementById("clearHistoryBtn");
-
-// Optional (for collapsible UI)
 const historyWrapper = document.getElementById("historyWrapper");
 const toggleHistoryBtn = document.getElementById("toggleHistoryBtn");
 
@@ -54,7 +44,7 @@ function setLoginButtonForUser(user) {
   if (user) {
     openLoginBtn.textContent = "Logout";
     openLoginBtn.title = user.email || "Logged in";
-    openLoginBtn.onclick = async () => await signOut(auth);
+    openLoginBtn.onclick = async () => { await signOut(auth); };
   } else {
     openLoginBtn.textContent = "Login / Sign Up";
     openLoginBtn.title = "Open login popup";
@@ -68,9 +58,7 @@ loginBtn?.addEventListener("click", async () => {
     await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
     alert("Login successful!");
     closeLogin();
-  } catch (err) {
-    alert("Login failed: " + (err?.message || err));
-  }
+  } catch (err) { alert("Login failed: " + (err?.message || err)); }
 });
 
 signupBtn?.addEventListener("click", async () => {
@@ -78,33 +66,63 @@ signupBtn?.addEventListener("click", async () => {
     await createUserWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
     alert("Sign up successful! You are now logged in.");
     closeLogin();
-  } catch (err) {
-    alert("Sign up failed: " + (err?.message || err));
+  } catch (err) { alert("Sign up failed: " + (err?.message || err)); }
+});
+
+onAuthStateChanged(auth, (user) => setLoginButtonForUser(user));
+
+// ----------------- HISTORY -----------------
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem("recommendationHistory") || "[]").slice(0,5); }
+  catch { return []; }
+}
+function setHistory(arr) { localStorage.setItem("recommendationHistory", JSON.stringify(arr.slice(0,5))); }
+function addToHistory(recommendationText) {
+  const history = getHistory();
+  history.unshift({ text: recommendationText, ts: Date.now() });
+  setHistory(history);
+  loadHistory();
+}
+function formatTimestamp(ts) { return new Date(ts).toLocaleString(); }
+
+function loadHistory() {
+  const history = getHistory();
+  if (!historyDiv) return;
+  if (!history.length) {
+    historyDiv.innerHTML = "<p>No previous recommendations yet.</p>";
+  } else {
+    historyDiv.innerHTML = history.map((item,i) => `
+      <div class="history-item" style="margin-bottom:8px;">
+        <strong>${i+1}.</strong> ${item.text}
+        <div style="font-size:12px;opacity:0.7;">${formatTimestamp(item.ts)}</div>
+        <hr>
+      </div>
+    `).join("");
   }
-});
+  if (toggleHistoryBtn && historyWrapper) {
+    const hidden = historyWrapper.style.display === "none";
+    toggleHistoryBtn.textContent = hidden
+      ? `Show Previous Recommendations (${history.length})`
+      : `Hide Previous Recommendations (${history.length})`;
+  }
+}
 
-onAuthStateChanged(auth, (user) => {
-  console.log(user ? `✅ User logged in: ${user.email}` : "⚠️ No user logged in");
-  setLoginButtonForUser(user);
+clearHistoryBtn?.addEventListener("click", () => { localStorage.removeItem("recommendationHistory"); loadHistory(); });
+toggleHistoryBtn?.addEventListener("click", () => {
+  if (!historyWrapper) return;
+  const hidden = historyWrapper.style.display === "none";
+  historyWrapper.style.display = hidden ? "block" : "none";
+  loadHistory();
 });
-
-// ----------------- QUIZ HELPERS -----------------
-// ... keep attachCheckLimit, normalizeHistoryArray, getHistory, setHistory, formatTimestamp, loadHistory, addToHistory as-is ...
+loadHistory();
 
 // ----------------- QUIZ SUBMIT -----------------
 quizForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
   const user = auth.currentUser;
+  if (!user) { alert("Please log in to submit the quiz."); openLogin(); return; }
 
-  if (!user) {
-    alert("Please log in to submit the quiz.");
-    openLogin();
-    return;
-  }
-
-  const form = e.target;
-  const formData = new FormData(form);
-
+  const formData = new FormData(e.target);
   const answers = {
     experience: formData.getAll("experience"),
     tasks: formData.getAll("tasks"),
@@ -115,56 +133,51 @@ quizForm?.addEventListener("submit", async (e) => {
     work_interest: formData.get("work_interest"),
     work_environment: formData.get("work_environment"),
     challenges: formData.get("challenges"),
-    career_goal: formData.get("career_goal"),
+    career_goal: formData.get("career_goal")
   };
 
-  if (resultDiv) {
-    resultDiv.innerHTML = "Generating your personalised recommendation... Please wait.";
-    resultDiv.style.display = "block";
-  }
-  if (loadingDiv) loadingDiv.style.display = "block";
+  if (resultDiv) { resultDiv.innerHTML = "Generating recommendation..."; resultDiv.style.display="block"; }
+  if (loadingDiv) loadingDiv.style.display="block";
 
   try {
-    // ----------------- FETCH USING RAILWAY URL -----------------
-    const response = await fetch(`${API_BASE}/api/recommend`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_input: answers.career_goal || "",
-        answers: answers,
-        top_k: 5,
-        explain: true
-      }),
+    const resp = await fetch(`${BACKEND_URL}/api/recommend`, {  // <-- updated to Render URL
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ user_input: answers.career_goal || "", answers, top_k:5, explain:true, user_id:user.uid })
     });
+    if (!resp.ok) throw new Error(`HTTP error ${resp.status}`);
+    const data = await resp.json();
 
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
+    const bestJob = data.best_match || { job_title:"N/A", description:"No description" };
+    const alternatives = data.alternatives || [];
+    const allJobs = [bestJob, ...alternatives].slice(0,5);
+    const jobsHtml = allJobs.map((job, idx) => {
+      const label = idx===0?"🌟 Best Match":`Suggestion ${idx}`;
+      return `<p><strong>${label}: ${job.job_title}</strong><br>${job.description}</p>`;
+    }).join("");
 
-    if (resultDiv) {
-      resultDiv.innerHTML = `
-        <h3>Your Career Recommendations:</h3>
-        <p>${data.recommendations?.map(r => r.job_title).join(", ") || "No recommendation received."}</p>
-        ${data.explanation ? `<p><em>${data.explanation}</em></p>` : ""}
-      `;
-    }
+    resultDiv.innerHTML = `
+      <h3>💼 Career Recommendations</h3>
+      ${jobsHtml}
+      <h4>💡 AI Explanation:</h4>
+      <p><em>${data.ai_summary || "Unavailable"}</em></p>
+    `;
 
-    // Save to Firebase
+    // Save to Firestore
     await addDoc(collection(db, "quizResponses"), {
       uid: user.uid,
       email: user.email || null,
       submittedAt: serverTimestamp(),
       answers,
-      recommendation: data.recommendations || null,
+      recommendation: allJobs
     });
 
-    if (data.recommendations) addToHistory(data.recommendations.map(r => r.job_title).join(", "));
+    addToHistory(allJobs.map(j=>j.job_title).join(", "));
 
-    console.log("✅ Quiz answers saved for:", user.uid);
-
-  } catch (err) {
+  } catch(err) {
     console.error(err);
-    if (resultDiv) resultDiv.innerHTML = `<p style="color:red;">Error fetching recommendation. Check console.</p>`;
+    if (resultDiv) resultDiv.innerHTML=`<p style="color:red;">Error fetching recommendation. Check console.</p>`;
   } finally {
-    if (loadingDiv) loadingDiv.style.display = "none";
+    if (loadingDiv) loadingDiv.style.display="none";
   }
 });
