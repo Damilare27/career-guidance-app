@@ -37,14 +37,21 @@ app.add_middleware(
 )
 
 # ---------- Firestore setup ----------
-FIREBASE_KEY_PATH = BASE_DIR / "firebase_key.json"  # Put your service account JSON here
-if FIREBASE_KEY_PATH.exists():
-    cred = credentials.Certificate(FIREBASE_KEY_PATH)
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
+# Load Firebase credentials from Railway env variable
+firebase_key_json = os.getenv("FIREBASE_KEY")
+
+db = None
+if firebase_key_json:
+    try:
+        cred_dict = json.loads(firebase_key_json)
+        cred = credentials.Certificate(cred_dict)
+        firebase_admin.initialize_app(cred)
+        db = firestore.client()
+        print("✅ Firestore initialized successfully")
+    except Exception as e:
+        print(f"❌ Firestore init failed: {e}")
 else:
-    db = None
-    print(f"Warning: Firestore not initialized. Missing key: {FIREBASE_KEY_PATH}")
+    print("⚠️ FIREBASE_KEY not found in environment variables")
 
 # ---------- Load dataset ----------
 def load_jobs() -> List[Dict[str, Any]]:
@@ -234,3 +241,4 @@ if FRONTEND_PATH.exists():
     app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
 else:
     print(f"Warning: FRONTEND_PATH does not exist: {FRONTEND_PATH}")
+
