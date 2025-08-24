@@ -1,4 +1,5 @@
 # backend/app.py
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -22,9 +23,10 @@ FRONTEND_PATH = BASE_DIR / "frontend"
 
 # ---------- FastAPI ----------
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten in production
+    allow_origins=["*"],   # TODO: tighten later for prod
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,25 +34,27 @@ app.add_middleware(
 
 # ---------- Load dataset ----------
 def load_jobs() -> List[Dict[str, Any]]:
-    if not DATA_PATH.exists():
-        print(f"Warning: DATA_PATH not found: {DATA_PATH}")
-        return []
     with open(DATA_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
+
     normalized = []
     for j in data:
         title = j.get("job_title") or j.get("title") or "Untitled role"
         desc = j.get("description") or j.get("job_description") or ""
-        normalized.append({"job_title": title, "description": desc})
+        normalized.append({
+            **j,
+            "job_title": title,
+            "description": desc
+        })
     return normalized
 
 JOBS = load_jobs()
 JOB_TITLES = [j["job_title"] for j in JOBS]
-JOB_DESCS = [j["description"] for j in JOBS]
+JOB_DESCS  = [j["description"] for j in JOBS]
 
-# ---------- TF-IDF ----------
+# ---------- TF-IDF (fit once at startup) ----------
 VECTORIZER = TfidfVectorizer(stop_words="english")
-JOB_MATRIX = VECTORIZER.fit_transform(JOB_DESCS) if JOB_DESCS else None
+JOB_MATRIX = VECTORIZER.fit_transform(JOB_DESCS)
 
 # ---------- OpenAI (optional) ----------
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -70,12 +74,17 @@ class RecommendPayload(BaseModel):
 def map_quiz_answers_to_keywords(answers: Dict[str, Any]) -> str:
     if not answers:
         return ""
+
     kws: List[str] = []
     for field in ["experience", "tasks", "skills", "career_interests"]:
         vals = answers.get(field) or []
         vals = [str(v).lower() for v in vals if v]
-        kws += vals * 2 if field == "skills" else vals
+        if field == "skills":
+            kws += vals * 2  # weight skills higher
+        else:
+            kws += vals
 
+    # Work style → expand keywords
     work_style = (answers.get("work_style") or "").lower()
     if work_style == "analytical":
         kws += ["analysis", "data", "problem solving", "research"]
@@ -86,11 +95,13 @@ def map_quiz_answers_to_keywords(answers: Dict[str, Any]) -> str:
     elif work_style:
         kws.append(work_style)
 
-    for f in ["work_interest", "work_environment", "challenges", "career_goal"]:
-        txt = (answers.get(f) or "").strip().lower()
-        if txt:
-            kws.append(txt)
+    # Other fields
+    for field in ["work_interest", "work_environment", "challenges", "career_goal"]:
+        val = (answers.get(field) or "").strip().lower()
+        if val:
+            kws.append(val)
 
+    # Confidence weighting
     try:
         conf = int(answers.get("confidence") or 0)
         if conf >= 8:
@@ -104,7 +115,7 @@ def map_quiz_answers_to_keywords(answers: Dict[str, Any]) -> str:
 
 # ---------- Ranking ----------
 def rank_jobs(profile_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
-    if not profile_text.strip() or JOB_MATRIX is None:
+    if not profile_text.strip():
         return []
     user_vec = VECTORIZER.transform([profile_text])
     sims = cosine_similarity(user_vec, JOB_MATRIX).flatten()
@@ -115,38 +126,44 @@ def rank_jobs(profile_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
     ]
 
 # ---------- AI Enhancement ----------
-async def enhance_jobs(profile_text: str, best: Dict[str, Any], alternatives: List[Dict[str, Any]]) -> str:
-    if not client:
-        return ""
-    alt_text = "\n".join([f"- {a['job_title']}: {a['description']}" for a in alternatives])
+def enhance_recommendations(profile_text: str, recs: List[Dict[str, Any]]) -> Optional[str]:
+    if not client or not recs:
+        return None
+
+    best_job = recs[0]
+    alternatives = recs[1:3]
+
     prompt = f"""
-User profile:
+User profile text:
 {profile_text}
 
-Best match:
-{best['job_title']}: {best['description']}
+Top matched jobs from dataset:
+1. {best_job['job_title']}: {best_job['description'][:300]}...
 
-Other suggestions:
-{alt_text}
+""" + "\n".join(
+        [f"{i+2}. {alt['job_title']}: {alt['description'][:300]}..."
+         for i, alt in enumerate(alternatives)]
+    ) + """
 
-Write a clear career advice summary:
-- Explain why the best match is ideal.
-- Briefly explain why the other suggestions are relevant.
-- Keep it supportive and concise (2–3 short paragraphs).
+Please:
+- Rephrase the best matched job description clearly.
+- Explain why it’s a good fit for the user.
+- Provide two alternative suggestions, concise and engaging.
 """
+
     try:
-        resp = await asyncio.to_thread(lambda: client.chat.completions.create(
+        resp = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a supportive career advisor."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=400,
+            max_tokens=500,
             temperature=0.7
-        ))
+        )
         return resp.choices[0].message.content.strip()
-    except Exception:
-        return "(AI enhancement unavailable)"
+    except Exception as e:
+        return f"(AI enhancement unavailable: {e})"
 
 # ---------- API ----------
 @app.get("/api/jobs")
@@ -155,7 +172,6 @@ async def get_jobs():
 
 @app.post("/api/recommend")
 async def recommend(payload: RecommendPayload):
-    # Build profile
     parts: List[str] = []
     if payload.job_description:
         parts.append(payload.job_description)
@@ -163,25 +179,21 @@ async def recommend(payload: RecommendPayload):
         parts.append(payload.user_input)
     if payload.answers:
         parts.append(map_quiz_answers_to_keywords(payload.answers))
+
     profile_text = " ".join([p for p in parts if p]).strip()
     if not profile_text:
-        return JSONResponse(content={"error": "No input provided."}, status_code=400)
+        return JSONResponse(
+            content={"error": "No input provided."},
+            status_code=400
+        )
 
-    # Rank jobs
     recs = rank_jobs(profile_text, payload.top_k or 5)
-    if not recs:
-        return {"error": "No jobs found"}
-
-    best = recs[0]
-    alternatives = recs[1:3]
-
-    # Generate AI enhancement asynchronously
-    ai_summary = await enhance_jobs(profile_text, best, alternatives) if payload.explain else None
+    ai_summary = enhance_recommendations(profile_text, recs) if payload.explain else None
 
     return {
         "profile_used": profile_text,
-        "best_match": best,
-        "alternatives": alternatives,
+        "best_match": recs[0] if recs else None,
+        "alternatives": recs[1:3] if len(recs) > 1 else [],
         "ai_summary": ai_summary
     }
 
@@ -190,4 +202,3 @@ if FRONTEND_PATH.exists():
     app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
 else:
     print(f"Warning: FRONTEND_PATH does not exist: {FRONTEND_PATH}")
-
