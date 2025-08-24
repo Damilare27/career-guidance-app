@@ -10,14 +10,12 @@ from pathlib import Path
 import json
 from datetime import datetime
 from random import sample
-import os
-import logging
 
 # Similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# OpenAI
+# OpenAI (synchronous)
 from openai import OpenAI
 
 # Firestore
@@ -33,18 +31,15 @@ FRONTEND_PATH = BASE_DIR / "frontend"
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # You can restrict to your frontend domain for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ---------- Logging ----------
-logging.basicConfig(level=logging.INFO)
-
-# ---------- 🔑 OpenAI ----------
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+# ---------- 🔑 OpenAI Key ----------
+OPENAI_API_KEY = "OPENAI_API_KEY"
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ---------- Firestore ----------
 db = None
@@ -60,11 +55,11 @@ if FIREBASE_KEY:
         logging.error(f"❌ Firestore init failed: {e}")
 else:
     logging.warning("⚠️ FIREBASE_KEY not provided; Firestore disabled")
-
+    
 # ---------- Load dataset ----------
 def load_jobs() -> List[Dict[str, Any]]:
     if not DATA_PATH.exists():
-        logging.warning(f"⚠️ DATA_PATH not found: {DATA_PATH}")
+        print(f"⚠️ DATA_PATH not found: {DATA_PATH}")
         return []
     with open(DATA_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -98,23 +93,28 @@ def map_quiz_answers_to_keywords(answers: Dict[str, Any]) -> str:
         return ""
     kws: List[str] = []
     for field in ["experience", "tasks", "skills", "career_interests"]:
-        vals = [str(v).lower() for v in answers.get(field) or [] if v]
+        vals = answers.get(field) or []
+        vals = [str(v).lower() for v in vals if v]
         kws += vals * 2 if field == "skills" else vals
     work_style = (answers.get("work_style") or "").lower()
-    style_map = {
-        "analytical": ["analysis", "data", "problem solving", "research"],
-        "creative": ["creative", "design", "storytelling", "branding", "content"],
-        "practical": ["hands-on", "implementation", "technical", "operations"]
-    }
-    kws += style_map.get(work_style, [work_style]) if work_style else []
+    if work_style == "analytical":
+        kws += ["analysis", "data", "problem solving", "research"]
+    elif work_style == "creative":
+        kws += ["creative", "design", "storytelling", "branding", "content"]
+    elif work_style == "practical":
+        kws += ["hands-on", "implementation", "technical", "operations"]
+    elif work_style:
+        kws.append(work_style)
     for field in ["work_interest", "work_environment", "challenges", "career_goal"]:
         val = (answers.get(field) or "").strip().lower()
         if val:
             kws.append(val)
     try:
         conf = int(answers.get("confidence") or 0)
-        if conf >= 8: kws += ["senior", "lead", "ownership"]
-        elif conf <= 3: kws += ["entry level", "junior", "training"]
+        if conf >= 8:
+            kws += ["senior", "lead", "ownership"]
+        elif conf <= 3:
+            kws += ["entry level", "junior", "training"]
     except Exception:
         pass
     return " ".join(kws)
@@ -126,7 +126,10 @@ def rank_jobs(profile_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
     user_vec = VECTORIZER.transform([profile_text])
     sims = cosine_similarity(user_vec, JOB_MATRIX).flatten()
     idxs = sims.argsort()[-top_k:][::-1]
-    return [{"job_title": JOB_TITLES[i], "description": JOB_DESCS[i], "score": float(sims[i])} for i in idxs]
+    return [
+        {"job_title": JOB_TITLES[i], "description": JOB_DESCS[i], "score": float(sims[i])}
+        for i in idxs
+    ]
 
 # ---------- AI Enhancement ----------
 def enhance_recommendations(profile_text: str, recs: List[Dict[str, Any]]) -> str:
@@ -134,27 +137,28 @@ def enhance_recommendations(profile_text: str, recs: List[Dict[str, Any]]) -> st
         return "AI enhancement unavailable"
     best_job = recs[0]
     alternatives = recs[1:3]
-    prompt_lines = [
-        "User profile text:",
-        profile_text,
-        "Top matched jobs:",
-        f"1. {best_job['job_title']}: {best_job['description'][:300]}..."
-    ]
-    prompt_lines += [
-        f"{i+2}. {alt['job_title']}: {alt['description'][:300]}..."
-        for i, alt in enumerate(alternatives)
-    ]
-    prompt_lines.append(
-        "Please:\n- Rephrase the best matched job description clearly.\n"
-        "- Explain why it’s a good fit for the user.\n"
-        "- Provide two alternative suggestions, concise and engaging."
-    )
+
+    prompt = f"""
+User profile text:
+{profile_text}
+
+Top matched jobs:
+1. {best_job['job_title']}: {best_job['description'][:300]}...
+""" + "\n".join(
+        [f"{i+2}. {alt['job_title']}: {alt['description'][:300]}..." for i, alt in enumerate(alternatives)]
+    ) + """
+Please:
+- Rephrase the best matched job description clearly.
+- Explain why it’s a good fit for the user.
+- Provide two alternative suggestions, concise and engaging.
+"""
+
     try:
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a supportive career advisor."},
-                {"role": "user", "content": "\n".join(prompt_lines)}
+                {"role": "user", "content": prompt}
             ],
             max_tokens=500,
             temperature=0.7
@@ -167,7 +171,8 @@ def enhance_recommendations(profile_text: str, recs: List[Dict[str, Any]]) -> st
 def save_recommendation(user_id: str, data: Dict[str, Any]):
     if not db or not user_id:
         return
-    db.collection("recommendations").document().set({
+    doc_ref = db.collection("recommendations").document()
+    doc_ref.set({
         "user_id": user_id,
         "profile_used": data.get("profile_used"),
         "best_match": data.get("best_match"),
@@ -183,7 +188,8 @@ def get_previous_recommendations(user_id: str) -> List[Dict[str, Any]]:
     docs = db.collection("recommendations")\
         .where("user_id", "==", user_id)\
         .order_by("timestamp", direction=firestore.Query.DESCENDING)\
-        .limit(10).stream()
+        .limit(10)\
+        .stream()
     return [doc.to_dict() for doc in docs]
 
 # ---------- API ----------
@@ -193,17 +199,26 @@ def get_jobs():
 
 @app.post("/api/recommend")
 def recommend(payload: RecommendPayload):
-    profile_parts = []
-    if payload.job_description: profile_parts.append(payload.job_description)
-    if payload.user_input: profile_parts.append(payload.user_input)
-    if payload.answers: profile_parts.append(map_quiz_answers_to_keywords(payload.answers))
-    profile_text = " ".join([p for p in profile_parts if p]).strip()
-    logging.info("Profile text: %s", profile_text)
+    parts: List[str] = []
+    if payload.job_description:
+        parts.append(payload.job_description)
+    if payload.user_input:
+        parts.append(payload.user_input)
+    if payload.answers:
+        parts.append(map_quiz_answers_to_keywords(payload.answers))
+    profile_text = " ".join([p for p in parts if p]).strip()
+    print("Profile text:", profile_text)
 
-    recs = rank_jobs(profile_text, payload.top_k) if profile_text else []
+    # Rank jobs
+    recs = rank_jobs(profile_text, payload.top_k or 5) if profile_text else []
+
+    # Fallback: dynamic selection from dataset if TF-IDF fails
     if not recs and JOBS:
-        recs = [{"job_title": j["job_title"], "description": j["description"], "score": 0.0} for j in sample(JOBS, min(payload.top_k, len(JOBS)))]
+        print("⚠️ TF-IDF returned no matches, using fallback jobs.")
+        sample_jobs = sample(JOBS, min(payload.top_k or 5, len(JOBS)))
+        recs = [{"job_title": j["job_title"], "description": j["description"], "score": 0.0} for j in sample_jobs]
 
+    # AI enhancement
     ai_summary = enhance_recommendations(profile_text, recs) if payload.explain else "AI enhancement unavailable"
 
     result = {
@@ -213,7 +228,10 @@ def recommend(payload: RecommendPayload):
         "ai_summary": ai_summary
     }
 
-    if payload.user_id: save_recommendation(payload.user_id, result)
+    # Save to Firestore
+    if payload.user_id:
+        save_recommendation(payload.user_id, result)
+
     return result
 
 @app.get("/api/recommendations/{user_id}")
@@ -225,18 +243,14 @@ def get_user_recommendations(user_id: str):
 if FRONTEND_PATH.exists():
     app.mount("/frontend", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
 else:
-    logging.warning(f"⚠️ FRONTEND_PATH does not exist: {FRONTEND_PATH}")
+    print(f"⚠️ FRONTEND_PATH does not exist: {FRONTEND_PATH}")
 
 # ---------- OpenAI test ----------
 @app.get("/api/test-openai")
 def test_openai():
-    if not client:
-        return {"error": "OpenAI client not initialized"}
     try:
         resp = client.models.list()
         models = [m.id for m in resp.data[:5]]
         return {"status": "ok", "models": models}
     except Exception as e:
         return {"error": str(e)}
-
-
