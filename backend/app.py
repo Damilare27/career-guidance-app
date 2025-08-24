@@ -75,8 +75,7 @@ JOB_MATRIX = VECTORIZER.fit_transform(JOB_DESCS) if JOB_DESCS else None
 
 # ---------- OpenAI ----------
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-HARDCODED_BACKUP_KEY = "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"
-client = AsyncOpenAI(api_key=OPENAI_API_KEY or HARDCODED_BACKUP_KEY)
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ---------- Request models ----------
 class RecommendPayload(BaseModel):
@@ -242,5 +241,6 @@ if FRONTEND_PATH.exists():
     app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
 else:
     print(f"Warning: FRONTEND_PATH does not exist: {FRONTEND_PATH}")
+
 
 
