@@ -30,7 +30,7 @@ FRONTEND_PATH = BASE_DIR / "frontend"
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TODO: tighten later for prod
+    allow_origins=["*"],  # TODO: restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -135,8 +135,10 @@ def rank_jobs(profile_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
 async def enhance_recommendations(profile_text: str, recs: List[Dict[str, Any]]) -> Optional[str]:
     if not client or not recs:
         return None
+
     best_job = recs[0]
     alternatives = recs[1:3]
+
     prompt = f"""
 User profile text:
 {profile_text}
@@ -151,8 +153,10 @@ Please:
 - Explain why it’s a good fit for the user.
 - Provide two alternative suggestions, concise and engaging.
 """
+
     try:
-        resp = await client.chat.completions.acreate(
+        # ✅ Correct async call
+        resp = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a supportive career advisor."},
@@ -165,24 +169,23 @@ Please:
     except Exception as e:
         return f"(AI enhancement unavailable: {e})"
 
-# ---------- Firestore save ----------
+# ---------- Firestore save (async) ----------
 async def save_recommendation(user_id: str, data: Dict[str, Any]):
     if not db or not user_id:
         return
     def _save():
         doc_ref = db.collection("recommendations").document()
-        data_to_save = {
+        doc_ref.set({
             "user_id": user_id,
             "profile_used": data.get("profile_used"),
             "best_match": data.get("best_match"),
             "alternatives": data.get("alternatives"),
             "ai_summary": data.get("ai_summary"),
             "timestamp": datetime.utcnow()
-        }
-        doc_ref.set(data_to_save)
+        })
     await asyncio.to_thread(_save)
 
-# ---------- Firestore get previous ----------
+# ---------- Firestore get previous (async) ----------
 async def get_previous_recommendations(user_id: str) -> List[Dict[str, Any]]:
     if not db or not user_id:
         return []
