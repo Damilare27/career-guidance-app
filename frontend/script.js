@@ -1,17 +1,26 @@
-// ----------------- FIREBASE INIT -----------------
+// ----------------- script.js (Render-ready) -----------------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut
+} from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
 
+// ---------- Firebase init ----------
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// ----------------- RENDER BACKEND URL -----------------
-const BACKEND_URL = "https://your-render-service.onrender.com"; // <--- Replace with your Render service URL
-
-// ----------------- DOM ELEMENTS -----------------
+// ---------- DOM Elements ----------
 const loginModal = document.getElementById("loginModal");
 const openLoginBtn = document.getElementById("openLoginBtn");
 const loginBtn = document.getElementById("loginBtn");
@@ -28,8 +37,13 @@ const clearHistoryBtn = document.getElementById("clearHistoryBtn");
 const historyWrapper = document.getElementById("historyWrapper");
 const toggleHistoryBtn = document.getElementById("toggleHistoryBtn");
 
-// ----------------- UI HELPERS -----------------
-function openLogin() { if (loginModal) loginModal.style.display = "block"; }
+// ---------- API Base ----------
+const API_BASE = "https://career-guidance-app-yee0.onrender.com/"; // <-- Replace with your Render URL
+
+// ---------- UI helpers ----------
+function openLogin() {
+  if (loginModal) loginModal.style.display = "block";
+}
 function closeLogin() {
   if (!loginModal) return;
   loginModal.style.display = "none";
@@ -44,7 +58,9 @@ function setLoginButtonForUser(user) {
   if (user) {
     openLoginBtn.textContent = "Logout";
     openLoginBtn.title = user.email || "Logged in";
-    openLoginBtn.onclick = async () => { await signOut(auth); };
+    openLoginBtn.onclick = async () => {
+      await signOut(auth);
+    };
   } else {
     openLoginBtn.textContent = "Login / Sign Up";
     openLoginBtn.title = "Open login popup";
@@ -52,13 +68,15 @@ function setLoginButtonForUser(user) {
   }
 }
 
-// ----------------- AUTH LISTENERS -----------------
+// ---------- Auth listeners ----------
 loginBtn?.addEventListener("click", async () => {
   try {
     await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
     alert("Login successful!");
     closeLogin();
-  } catch (err) { alert("Login failed: " + (err?.message || err)); }
+  } catch (err) {
+    alert("Login failed: " + (err?.message || err));
+  }
 });
 
 signupBtn?.addEventListener("click", async () => {
@@ -66,38 +84,50 @@ signupBtn?.addEventListener("click", async () => {
     await createUserWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
     alert("Sign up successful! You are now logged in.");
     closeLogin();
-  } catch (err) { alert("Sign up failed: " + (err?.message || err)); }
+  } catch (err) {
+    alert("Sign up failed: " + (err?.message || err));
+  }
 });
 
 onAuthStateChanged(auth, (user) => setLoginButtonForUser(user));
 
-// ----------------- HISTORY -----------------
+// ---------- History ----------
 function getHistory() {
-  try { return JSON.parse(localStorage.getItem("recommendationHistory") || "[]").slice(0,5); }
-  catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem("recommendationHistory") || "[]").slice(0, 5);
+  } catch {
+    return [];
+  }
 }
-function setHistory(arr) { localStorage.setItem("recommendationHistory", JSON.stringify(arr.slice(0,5))); }
+function setHistory(arr) {
+  localStorage.setItem("recommendationHistory", JSON.stringify(arr.slice(0, 5)));
+}
 function addToHistory(recommendationText) {
   const history = getHistory();
   history.unshift({ text: recommendationText, ts: Date.now() });
   setHistory(history);
   loadHistory();
 }
-function formatTimestamp(ts) { return new Date(ts).toLocaleString(); }
-
+function formatTimestamp(ts) {
+  return new Date(ts).toLocaleString();
+}
 function loadHistory() {
   const history = getHistory();
   if (!historyDiv) return;
   if (!history.length) {
     historyDiv.innerHTML = "<p>No previous recommendations yet.</p>";
   } else {
-    historyDiv.innerHTML = history.map((item,i) => `
+    historyDiv.innerHTML = history
+      .map(
+        (item, i) => `
       <div class="history-item" style="margin-bottom:8px;">
-        <strong>${i+1}.</strong> ${item.text}
+        <strong>${i + 1}.</strong> ${item.text}
         <div style="font-size:12px;opacity:0.7;">${formatTimestamp(item.ts)}</div>
         <hr>
       </div>
-    `).join("");
+    `
+      )
+      .join("");
   }
   if (toggleHistoryBtn && historyWrapper) {
     const hidden = historyWrapper.style.display === "none";
@@ -106,8 +136,10 @@ function loadHistory() {
       : `Hide Previous Recommendations (${history.length})`;
   }
 }
-
-clearHistoryBtn?.addEventListener("click", () => { localStorage.removeItem("recommendationHistory"); loadHistory(); });
+clearHistoryBtn?.addEventListener("click", () => {
+  localStorage.removeItem("recommendationHistory");
+  loadHistory();
+});
 toggleHistoryBtn?.addEventListener("click", () => {
   if (!historyWrapper) return;
   const hidden = historyWrapper.style.display === "none";
@@ -116,45 +148,56 @@ toggleHistoryBtn?.addEventListener("click", () => {
 });
 loadHistory();
 
-// ----------------- QUIZ SUBMIT -----------------
+// ---------- Quiz submit ----------
 quizForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
   const user = auth.currentUser;
-  if (!user) { alert("Please log in to submit the quiz."); openLogin(); return; }
+  if (!user) {
+    alert("Please log in to submit the quiz.");
+    openLogin();
+    return;
+  }
 
   const formData = new FormData(e.target);
-  const answers = {
-    experience: formData.getAll("experience"),
-    tasks: formData.getAll("tasks"),
-    confidence: formData.get("confidence"),
-    work_style: formData.get("work_style"),
-    skills: formData.getAll("skills"),
-    career_interests: formData.getAll("career_interests"),
-    work_interest: formData.get("work_interest"),
-    work_environment: formData.get("work_environment"),
-    challenges: formData.get("challenges"),
-    career_goal: formData.get("career_goal")
-  };
+  const answers = Object.fromEntries(formData.entries());
 
-  if (resultDiv) { resultDiv.innerHTML = "Generating recommendation..."; resultDiv.style.display="block"; }
-  if (loadingDiv) loadingDiv.style.display="block";
+  if (resultDiv) {
+    resultDiv.innerHTML = "Generating recommendation...";
+    resultDiv.style.display = "block";
+  }
+  if (loadingDiv) loadingDiv.style.display = "block";
 
   try {
-    const resp = await fetch(`${BACKEND_URL}/api/recommend`, {  // <-- updated to Render URL
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ user_input: answers.career_goal || "", answers, top_k:5, explain:true, user_id:user.uid })
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+    const resp = await fetch(`${API_BASE}/api/recommend`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_input: answers.career_goal || "",
+        answers,
+        top_k: 5,
+        explain: true,
+        user_id: user.uid
+      }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error(`HTTP error ${resp.status}`);
     const data = await resp.json();
 
-    const bestJob = data.best_match || { job_title:"N/A", description:"No description" };
+    const bestJob = data.best_match || { job_title: "N/A", description: "No description" };
     const alternatives = data.alternatives || [];
-    const allJobs = [bestJob, ...alternatives].slice(0,5);
-    const jobsHtml = allJobs.map((job, idx) => {
-      const label = idx===0?"🌟 Best Match":`Suggestion ${idx}`;
-      return `<p><strong>${label}: ${job.job_title}</strong><br>${job.description}</p>`;
-    }).join("");
+    const allJobs = [bestJob, ...alternatives].slice(0, 5);
+
+    const jobsHtml = allJobs
+      .map((job, idx) => {
+        const label = idx === 0 ? "🌟 Best Match" : `Suggestion ${idx}`;
+        return `<p><strong>${label}: ${job.job_title}</strong><br>${job.description}</p>`;
+      })
+      .join("");
 
     resultDiv.innerHTML = `
       <h3>💼 Career Recommendations</h3>
@@ -172,12 +215,11 @@ quizForm?.addEventListener("submit", async (e) => {
       recommendation: allJobs
     });
 
-    addToHistory(allJobs.map(j=>j.job_title).join(", "));
-
-  } catch(err) {
+    addToHistory(allJobs.map((j) => j.job_title).join(", "));
+  } catch (err) {
     console.error(err);
-    if (resultDiv) resultDiv.innerHTML=`<p style="color:red;">Error fetching recommendation. Check console.</p>`;
+    resultDiv.innerHTML = `<p style="color:red;">Error fetching recommendation. Please try again.</p>`;
   } finally {
-    if (loadingDiv) loadingDiv.style.display="none";
+    if (loadingDiv) loadingDiv.style.display = "none";
   }
 });
