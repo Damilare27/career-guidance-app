@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 from pathlib import Path
-import json, os, logging
+import json
 from datetime import datetime
 from random import sample
 
@@ -56,6 +56,17 @@ if FIREBASE_KEY:
 else:
     logging.warning("⚠️ FIREBASE_KEY not provided; Firestore disabled")
     
+
+# ---------- Firestore setup ----------
+db = None
+try:
+    cred = credentials.Certificate(FIREBASE_KEY_DICT)
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+    print("✅ Firestore initialized successfully")
+except Exception as e:
+    print(f"❌ Firestore init failed: {e}")
+
 # ---------- Load dataset ----------
 def load_jobs() -> List[Dict[str, Any]]:
     if not DATA_PATH.exists():
@@ -254,5 +265,3 @@ def test_openai():
         return {"status": "ok", "models": models}
     except Exception as e:
         return {"error": str(e)}
-
-
