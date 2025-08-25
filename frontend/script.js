@@ -138,7 +138,7 @@ quizForm?.addEventListener("submit", async (e) => {
   if (loadingDiv) loadingDiv.style.display="block";
 
   try {
-    const resp = await fetch("https://career-guidance-app-yee0.onrender.com/api/recommend", {
+    const response = await fetch("/api/recommend", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify({ user_input: answers.career_goal || "", answers, top_k:5, explain:true, user_id:user.uid })
@@ -181,3 +181,4 @@ quizForm?.addEventListener("submit", async (e) => {
     if (loadingDiv) loadingDiv.style.display="none";
   }
 });
+
