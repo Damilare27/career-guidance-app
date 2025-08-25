@@ -8,6 +8,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// ----------------- Render backend URL -----------------
+const BACKEND_URL = "https://career-guidance-app-yee0.onrender.com"; // <-- Replace with your actual backend URL
+
 // ----------------- DOM ELEMENTS -----------------
 const loginModal = document.getElementById("loginModal");
 const openLoginBtn = document.getElementById("openLoginBtn");
@@ -70,9 +73,8 @@ onAuthStateChanged(auth, (user) => setLoginButtonForUser(user));
 
 // ----------------- HISTORY -----------------
 function getHistory() {
-  try {
-    return JSON.parse(localStorage.getItem("recommendationHistory") || "[]").slice(0,5);
-  } catch { return []; }
+  try { return JSON.parse(localStorage.getItem("recommendationHistory") || "[]").slice(0,5); }
+  catch { return []; }
 }
 function setHistory(arr) { localStorage.setItem("recommendationHistory", JSON.stringify(arr.slice(0,5))); }
 function addToHistory(recommendationText) {
@@ -86,17 +88,15 @@ function formatTimestamp(ts) { return new Date(ts).toLocaleString(); }
 function loadHistory() {
   const history = getHistory();
   if (!historyDiv) return;
-  if (!history.length) {
-    historyDiv.innerHTML = "<p>No previous recommendations yet.</p>";
-  } else {
-    historyDiv.innerHTML = history.map((item,i) => `
+  if (!history.length) historyDiv.innerHTML = "<p>No previous recommendations yet.</p>";
+  else historyDiv.innerHTML = history.map((item,i) => `
       <div class="history-item" style="margin-bottom:8px;">
         <strong>${i+1}.</strong> ${item.text}
         <div style="font-size:12px;opacity:0.7;">${formatTimestamp(item.ts)}</div>
         <hr>
       </div>
     `).join("");
-  }
+
   if (toggleHistoryBtn && historyWrapper) {
     const hidden = historyWrapper.style.display === "none";
     toggleHistoryBtn.textContent = hidden
@@ -138,7 +138,7 @@ quizForm?.addEventListener("submit", async (e) => {
   if (loadingDiv) loadingDiv.style.display="block";
 
   try {
-    const response = await fetch("/api/recommend", {
+    const resp = await fetch(`${BACKEND_URL}/api/recommend`, {   // <-- Updated URL
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify({ user_input: answers.career_goal || "", answers, top_k:5, explain:true, user_id:user.uid })
@@ -181,4 +181,3 @@ quizForm?.addEventListener("submit", async (e) => {
     if (loadingDiv) loadingDiv.style.display="none";
   }
 });
-
