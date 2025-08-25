@@ -1,21 +1,24 @@
 # backend/app.py
 
+import os
+import json
+import logging
+from pathlib import Path
+from datetime import datetime
+from random import sample
+from typing import Any, Dict, List, Optional
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
-from pathlib import Path
-import json
-from datetime import datetime
-from random import sample
 
 # Similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# OpenAI (synchronous)
+# OpenAI
 from openai import OpenAI
 
 # Firestore
@@ -31,15 +34,15 @@ FRONTEND_PATH = BASE_DIR / "frontend"
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Allow all origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ---------- 🔑 OpenAI Key ----------
-OPENAI_API_KEY = "OPENAI_API_KEY"
-client = OpenAI(api_key=OPENAI_API_KEY)
+# ---------- OpenAI ----------
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 # ---------- Firestore ----------
 db = None
@@ -55,22 +58,11 @@ if FIREBASE_KEY:
         logging.error(f"❌ Firestore init failed: {e}")
 else:
     logging.warning("⚠️ FIREBASE_KEY not provided; Firestore disabled")
-    
-
-# ---------- Firestore setup ----------
-db = None
-try:
-    cred = credentials.Certificate(FIREBASE_KEY_DICT)
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    print("✅ Firestore initialized successfully")
-except Exception as e:
-    print(f"❌ Firestore init failed: {e}")
 
 # ---------- Load dataset ----------
 def load_jobs() -> List[Dict[str, Any]]:
     if not DATA_PATH.exists():
-        print(f"⚠️ DATA_PATH not found: {DATA_PATH}")
+        logging.warning(f"⚠️ DATA_PATH not found: {DATA_PATH}")
         return []
     with open(DATA_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -218,14 +210,14 @@ def recommend(payload: RecommendPayload):
     if payload.answers:
         parts.append(map_quiz_answers_to_keywords(payload.answers))
     profile_text = " ".join([p for p in parts if p]).strip()
-    print("Profile text:", profile_text)
+    logging.info(f"Profile text: {profile_text}")
 
     # Rank jobs
     recs = rank_jobs(profile_text, payload.top_k or 5) if profile_text else []
 
     # Fallback: dynamic selection from dataset if TF-IDF fails
     if not recs and JOBS:
-        print("⚠️ TF-IDF returned no matches, using fallback jobs.")
+        logging.warning("⚠️ TF-IDF returned no matches, using fallback jobs.")
         sample_jobs = sample(JOBS, min(payload.top_k or 5, len(JOBS)))
         recs = [{"job_title": j["job_title"], "description": j["description"], "score": 0.0} for j in sample_jobs]
 
@@ -252,16 +244,16 @@ def get_user_recommendations(user_id: str):
 
 # ---------- Serve frontend ----------
 if FRONTEND_PATH.exists():
-    app.mount("/frontend", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
+    app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
 else:
-    print(f"⚠️ FRONTEND_PATH does not exist: {FRONTEND_PATH}")
+    logging.warning(f"⚠️ FRONTEND_PATH does not exist: {FRONTEND_PATH}")
 
 # ---------- OpenAI test ----------
 @app.get("/api/test-openai")
 def test_openai():
     try:
-        resp = client.models.list()
-        models = [m.id for m in resp.data[:5]]
+        resp = client.models.list() if client else None
+        models = [m.id for m in resp.data[:5]] if resp else []
         return {"status": "ok", "models": models}
     except Exception as e:
         return {"error": str(e)}
