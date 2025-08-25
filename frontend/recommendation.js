@@ -11,6 +11,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const auth = getAuth();
 
+  // ---------- Your Render backend URL ----------
+  const BACKEND_URL = "https://career-guidance-app-yee0.onrender.com"; // <-- Replace with your actual backend URL
+
   // ------------------ Helpers ------------------
   const cleanDescription = (text) =>
     text ? (text.endsWith("...") ? text.slice(0, -3) + "." : text) : "No description available.";
@@ -32,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const response = await fetch(`/api/recommendations/${user.uid}`);
+      const response = await fetch(`${BACKEND_URL}/api/recommendations/${user.uid}`);
       if (!response.ok) throw new Error(`HTTP error ${response.status}`);
       const data = await response.json();
       const recs = data.recommendations || [];
@@ -86,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-      const response = await fetch("/api/recommend", {
+      const response = await fetch(`${BACKEND_URL}/api/recommend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -108,9 +111,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const bestJob = data.best_match || { job_title: "N/A", description: "No description available" };
       const alternatives = data.alternatives.length
         ? data.alternatives
-        : Array(4).fill({ job_title: "N/A", description: "No description available" }); // fill to 5 jobs
+        : Array(4).fill({ job_title: "N/A", description: "No description available" });
 
-      const allJobs = [bestJob, ...alternatives].slice(0, 5); // ensure exactly 5
+      const allJobs = [bestJob, ...alternatives].slice(0, 5);
 
       const jobsHtml = allJobs
         .map((job, idx) => {
@@ -145,4 +148,3 @@ document.addEventListener("DOMContentLoaded", () => {
     if (user) loadPreviousRecommendations();
   });
 });
-
