@@ -1,4 +1,4 @@
-// ------------------ recommendations.js (Render-ready) ------------------
+// ------------------ recommendations.js ------------------
 import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -10,7 +10,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!form || !loadingDiv || !resultDiv || !historyDiv) return;
 
   const auth = getAuth();
-  const API_BASE = "https://career-guidance-app-yee0.onrender.com/"; // <-- Replace with your Render URL
 
   // ------------------ Helpers ------------------
   const cleanDescription = (text) =>
@@ -33,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/api/recommendations/${user.uid}`);
+      const response = await fetch(`https://career-guidance-app-yee0.onrender.com/api/recommendations/${user.uid}`);
       if (!response.ok) throw new Error(`HTTP error ${response.status}`);
       const data = await response.json();
       const recs = data.recommendations || [];
@@ -87,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-      const response = await fetch(`${API_BASE}/api/recommend`, {
+      const response = await fetch("https://career-guidance-app-yee0.onrender.com/api/recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,9 +108,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const bestJob = data.best_match || { job_title: "N/A", description: "No description available" };
       const alternatives = data.alternatives.length
         ? data.alternatives
-        : Array(4).fill({ job_title: "N/A", description: "No description available" });
+        : Array(4).fill({ job_title: "N/A", description: "No description available" }); // fill to 5 jobs
 
-      const allJobs = [bestJob, ...alternatives].slice(0, 5);
+      const allJobs = [bestJob, ...alternatives].slice(0, 5); // ensure exactly 5
 
       const jobsHtml = allJobs
         .map((job, idx) => {
