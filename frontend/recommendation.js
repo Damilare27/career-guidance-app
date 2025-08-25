@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const response = await fetch(`https://career-guidance-app-yee0.onrender.com/api/recommendations/${user.uid}`);
+      const response = await fetch(`/api/recommendations/${user.uid}`);
       if (!response.ok) throw new Error(`HTTP error ${response.status}`);
       const data = await response.json();
       const recs = data.recommendations || [];
@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-      const response = await fetch("https://career-guidance-app-yee0.onrender.com/api/recommend", {
+      const response = await fetch("/api/recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -145,3 +145,4 @@ document.addEventListener("DOMContentLoaded", () => {
     if (user) loadPreviousRecommendations();
   });
 });
+
